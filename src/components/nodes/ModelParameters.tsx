@@ -80,7 +80,7 @@ function ModelParametersInner({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Use stable selector for API keys to prevent unnecessary re-fetches
-  const { replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey } = useProviderApiKeys();
+  const { replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey } = useProviderApiKeys();
 
   // Fetch schema when modelId changes
   useEffect(() => {
@@ -116,6 +116,15 @@ function ModelParametersInner({
         if (wavespeedApiKey) {
           headers["X-WaveSpeed-Key"] = wavespeedApiKey;
         }
+        if (openaiApiKey) {
+          headers["X-OpenAI-API-Key"] = openaiApiKey;
+        }
+        if (byteplusApiKey) {
+          headers["X-BytePlus-API-Key"] = byteplusApiKey;
+        }
+        if (elevenlabsApiKey) {
+          headers["X-ElevenLabs-API-Key"] = elevenlabsApiKey;
+        }
 
         const encodedModelId = encodeURIComponent(modelId);
         const response = await deduplicatedFetch(
@@ -150,7 +159,7 @@ function ModelParametersInner({
     };
 
     fetchSchema();
-  }, [modelId, provider, replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, onInputsLoaded]);
+  }, [modelId, provider, replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey, onInputsLoaded]);
 
   // Pre-populate schema defaults into parameters
   useEffect(() => {

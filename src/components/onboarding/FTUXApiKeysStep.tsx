@@ -55,6 +55,19 @@ const WaveSpeedIcon = () => (
   </svg>
 );
 
+const BytePlusIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const ElevenLabsIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1.5" />
+    <rect x="14" y="4" width="4" height="16" rx="1.5" />
+  </svg>
+);
+
 interface ProviderInfo {
   id: ProviderType;
   name: string;
@@ -71,6 +84,8 @@ const providers: ProviderInfo[] = [
   { id: "replicate", name: "Replicate", icon: ReplicateIcon, apiKeyUrl: "https://replicate.com/account/api-tokens" },
   { id: "kie", name: "Kie.ai", icon: KieIcon, apiKeyUrl: "https://kie.ai/api-key" },
   { id: "wavespeed", name: "WaveSpeed", icon: WaveSpeedIcon, apiKeyUrl: "https://wavespeed.ai/accesskey" },
+  { id: "byteplus", name: "BytePlus", icon: BytePlusIcon, apiKeyUrl: "https://console.byteplus.com/" },
+  { id: "elevenlabs", name: "ElevenLabs", icon: ElevenLabsIcon, apiKeyUrl: "https://elevenlabs.io/app/settings/api-keys" },
 ];
 
 export function FTUXApiKeysStep({}: FTUXStepProps) {
@@ -85,6 +100,8 @@ export function FTUXApiKeysStep({}: FTUXStepProps) {
     fal: false,
     kie: false,
     wavespeed: false,
+    byteplus: false,
+    elevenlabs: false,
   });
   const [localKeys, setLocalKeys] = useState<Record<ProviderType, string>>(() => {
     const keys: Record<ProviderType, string> = {
@@ -95,6 +112,8 @@ export function FTUXApiKeysStep({}: FTUXStepProps) {
       fal: "",
       kie: "",
       wavespeed: "",
+      byteplus: "",
+      elevenlabs: "",
     };
     for (const id of Object.keys(keys) as ProviderType[]) {
       const saved = providerSettings.providers[id]?.apiKey;

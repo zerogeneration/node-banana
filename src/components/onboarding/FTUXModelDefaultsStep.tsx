@@ -36,6 +36,19 @@ const WaveSpeedIcon = () => (
   </svg>
 );
 
+const BytePlusIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const ElevenLabsIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1.5" />
+    <rect x="14" y="4" width="4" height="16" rx="1.5" />
+  </svg>
+);
+
 const getProviderIcon = (provider: string) => {
   switch (provider) {
     case "gemini":
@@ -46,6 +59,10 @@ const getProviderIcon = (provider: string) => {
       return <FalIcon />;
     case "wavespeed":
       return <WaveSpeedIcon />;
+    case "byteplus":
+      return <BytePlusIcon />;
+    case "elevenlabs":
+      return <ElevenLabsIcon />;
     default:
       return null;
   }

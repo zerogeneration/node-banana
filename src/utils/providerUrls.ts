@@ -21,6 +21,12 @@ export function getModelPageUrl(
       return `https://docs.kie.ai/`;
     case "wavespeed":
       return `https://wavespeed.ai`;
+    case "byteplus":
+      return `https://docs.byteplus.com/en/docs/ModelArk`;
+    case "openai":
+      return `https://platform.openai.com/docs/guides/images`;
+    case "elevenlabs":
+      return `https://elevenlabs.io/docs`;
     default:
       return null;
   }
@@ -41,6 +47,12 @@ export function getProviderDisplayName(provider: ProviderType): string {
       return "Kie.ai";
     case "wavespeed":
       return "WaveSpeed";
+    case "byteplus":
+      return "BytePlus";
+    case "openai":
+      return "OpenAI";
+    case "elevenlabs":
+      return "ElevenLabs";
     default:
       return provider;
   }
