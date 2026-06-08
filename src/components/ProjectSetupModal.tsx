@@ -337,7 +337,7 @@ export function ProjectSetupModal({
 
   const handleSaveProviders = () => {
     // Save each provider's settings
-    const providerIds: ProviderType[] = ["gemini", "openai", "anthropic", "replicate", "fal", "kie", "wavespeed"];
+    const providerIds: ProviderType[] = ["gemini", "openai", "anthropic", "replicate", "fal", "kie", "wavespeed", "byteplus", "elevenlabs"];
     for (const providerId of providerIds) {
       const local = localProviders.providers[providerId];
       const current = providerSettings.providers[providerId];

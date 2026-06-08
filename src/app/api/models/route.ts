@@ -1,13 +1,14 @@
 /**
  * Unified Models API Endpoint
  *
- * Aggregates models from all configured providers (Replicate, fal.ai, Gemini, WaveSpeed).
- * Uses in-memory caching to reduce external API calls.
+ * Aggregates models from all configured providers (Gemini, Replicate, fal.ai, Kie.ai,
+ * WaveSpeed, OpenAI, BytePlus, ElevenLabs). Uses in-memory caching to reduce external API calls.
  *
  * GET /api/models
  *
  * Query params:
- *   - provider: Optional, filter to specific provider ("replicate" | "fal" | "gemini" | "wavespeed")
+ *   - provider: Optional, filter to specific provider
+ *     ("gemini" | "replicate" | "fal" | "kie" | "wavespeed" | "openai" | "byteplus" | "elevenlabs")
  *   - search: Optional, search query
  *   - refresh: Optional, bypass cache if "true"
  *   - capabilities: Optional, filter by capabilities (comma-separated)
@@ -15,7 +16,11 @@
  * Headers:
  *   - X-Replicate-Key: Replicate API key
  *   - X-Fal-Key: fal.ai API key (optional, works without but rate limited)
+ *   - X-Kie-Key: Kie.ai API key
  *   - X-WaveSpeed-Key: WaveSpeed API key
+ *   - X-OpenAI-API-Key: OpenAI API key
+ *   - X-BytePlus-API-Key: BytePlus API key (ARK_API_KEY env also accepted)
+ *   - X-ElevenLabs-API-Key: ElevenLabs API key
  *
  * Response:
  *   {
@@ -1328,7 +1333,7 @@ export async function GET(
       {
         success: false,
         error:
-          "No providers available. Add REPLICATE_API_KEY, FAL_API_KEY, KIE_API_KEY, or WAVESPEED_API_KEY to .env.local or configure in Settings.",
+          "No providers available. Add OPENAI_API_KEY, BYTEPLUS_API_KEY, ELEVENLABS_API_KEY, REPLICATE_API_KEY, FAL_API_KEY, KIE_API_KEY, or WAVESPEED_API_KEY to .env.local or configure in Settings.",
       },
       { status: 400 }
     );
