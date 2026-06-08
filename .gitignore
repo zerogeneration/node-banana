@@ -1,5 +1,9 @@
 # dependencies
 /node_modules
+# vendored @zerogen/providers: intermediate compiled dir is ignored; the small
+# .tgz it produces IS committed so the branch installs without a pre-build step.
+# Regenerate with: node scripts/build-zerogen-binding.mjs
+/vendor/zerogen-providers/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
