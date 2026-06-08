@@ -4,7 +4,7 @@
  * Fetches parameter schema for a specific model from its provider.
  * Returns simplified parameter list for UI rendering.
  *
- * GET /api/models/:modelId?provider=replicate|fal|wavespeed
+ * GET /api/models/:modelId?provider=replicate|fal|wavespeed|kie|gemini|openai|byteplus|elevenlabs
  *
  * Headers:
  *   - X-Replicate-Key: Required for Replicate models
@@ -1143,6 +1143,97 @@ function getKieSchema(modelId: string): ExtractedSchema {
  * Get schema for Gemini video models (native Veo via Gemini API)
  * Returns null if the model is not a Gemini video model.
  */
+/**
+ * Static parameter schema for OpenAI image models (no schema-discovery API).
+ * Params mirror what the @zerogen/providers OpenAI adapter consumes.
+ */
+function getOpenAISchema(modelId: string): ExtractedSchema {
+  const promptInput: ModelInput = { name: "prompt", type: "text", required: true, label: "Prompt" };
+  const schemas: Record<string, ExtractedSchema> = {
+    "gpt-image-1": {
+      parameters: [
+        { name: "size", type: "string", description: "Output size", enum: ["auto", "1024x1024", "1536x1024", "1024x1536"], default: "auto" },
+        { name: "quality", type: "string", description: "Render quality", enum: ["auto", "low", "medium", "high"], default: "auto" },
+        { name: "background", type: "string", description: "Background", enum: ["auto", "transparent", "opaque"], default: "auto" },
+        { name: "output_format", type: "string", description: "Image format", enum: ["png", "jpeg", "webp"], default: "png" },
+        { name: "n", type: "integer", description: "Number of images", minimum: 1, maximum: 10, default: 1 },
+      ],
+      inputs: [promptInput, { name: "image_urls", type: "image", required: false, label: "Reference image(s)", isArray: true }],
+    },
+    "dall-e-3": {
+      parameters: [
+        { name: "size", type: "string", description: "Output size", enum: ["1024x1024", "1792x1024", "1024x1792"], default: "1024x1024" },
+        { name: "quality", type: "string", description: "Render quality", enum: ["standard", "hd"], default: "standard" },
+      ],
+      inputs: [promptInput],
+    },
+  };
+  return schemas[modelId] || { parameters: [], inputs: [promptInput] };
+}
+
+/**
+ * Static parameter schema for BytePlus Seedance video models.
+ * Params mirror what the @zerogen/providers BytePlus adapter consumes; unknown
+ * params (resolution, seed) flow through the adapter's `extra` escape hatch.
+ */
+function getBytePlusSchema(_modelId: string): ExtractedSchema {
+  return {
+    parameters: [
+      { name: "ratio", type: "string", description: "Aspect ratio", enum: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], default: "16:9" },
+      { name: "durationSeconds", type: "integer", description: "Clip duration (seconds)", minimum: 3, maximum: 12, default: 5 },
+      { name: "resolution", type: "string", description: "Output resolution", enum: ["480p", "720p", "1080p"], default: "720p" },
+      { name: "generateAudio", type: "boolean", description: "Generate an audio track", default: false },
+      { name: "seed", type: "integer", description: "Random seed (optional)", minimum: 0 },
+    ],
+    inputs: [
+      { name: "prompt", type: "text", required: false, label: "Prompt" },
+      { name: "image_urls", type: "image", required: false, label: "Reference / first frame", isArray: true },
+    ],
+  };
+}
+
+/**
+ * Static parameter schema for ElevenLabs audio models, keyed by model id
+ * (node-banana collapses all audio to "text-to-audio"; speech/music/sfx is
+ * inferred from the model id, matching the binding's routing).
+ */
+function getElevenLabsSchema(modelId: string): ExtractedSchema {
+  const outputFormat: ModelParameter = {
+    name: "outputFormat",
+    type: "string",
+    description: "Audio output format",
+    enum: ["mp3_44100_128", "mp3_44100_192", "mp3_22050_32", "pcm_16000", "pcm_24000"],
+    default: "mp3_44100_128",
+  };
+  const promptInput: ModelInput = { name: "prompt", type: "text", required: true, label: "Prompt" };
+  if (modelId.includes("music")) {
+    return {
+      parameters: [
+        { name: "lengthMs", type: "integer", description: "Track length (ms)", minimum: 3000, maximum: 300000, default: 10000 },
+        outputFormat,
+      ],
+      inputs: [promptInput],
+    };
+  }
+  if (modelId.includes("sound") || modelId.includes("sfx")) {
+    return {
+      parameters: [
+        { name: "durationSeconds", type: "number", description: "Effect duration (seconds)", minimum: 0.5, maximum: 22, default: 5 },
+        outputFormat,
+      ],
+      inputs: [promptInput],
+    };
+  }
+  // Speech (default)
+  return {
+    parameters: [
+      { name: "voiceId", type: "string", description: "ElevenLabs voice id", default: "21m00Tcm4TlvDq8ikWAM" },
+      outputFormat,
+    ],
+    inputs: [promptInput],
+  };
+}
+
 function getGeminiVideoSchema(modelId: string): ExtractedSchema | null {
   const commonParams: ModelParameter[] = [
     { name: "aspectRatio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16"], default: "16:9" },
@@ -1460,11 +1551,22 @@ export async function GET(
   const decodedModelId = decodeURIComponent(modelId);
   const provider = request.nextUrl.searchParams.get("provider") as ProviderType | null;
 
-  if (!provider || (provider !== "replicate" && provider !== "fal" && provider !== "kie" && provider !== "wavespeed" && provider !== "gemini")) {
+  if (
+    !provider ||
+    (provider !== "replicate" &&
+      provider !== "fal" &&
+      provider !== "kie" &&
+      provider !== "wavespeed" &&
+      provider !== "gemini" &&
+      provider !== "openai" &&
+      provider !== "byteplus" &&
+      provider !== "elevenlabs")
+  ) {
     return NextResponse.json<SchemaErrorResponse>(
       {
         success: false,
-        error: "Invalid or missing provider. Use ?provider=replicate, ?provider=fal, ?provider=kie, ?provider=wavespeed, or ?provider=gemini",
+        error:
+          "Invalid or missing provider. Use ?provider=replicate, ?provider=fal, ?provider=kie, ?provider=wavespeed, ?provider=gemini, ?provider=openai, ?provider=byteplus, or ?provider=elevenlabs",
       },
       { status: 400 }
     );
@@ -1512,6 +1614,15 @@ export async function GET(
     } else if (provider === "kie") {
       // Kie.ai uses hardcoded schemas (no schema discovery API)
       result = getKieSchema(decodedModelId);
+    } else if (provider === "openai") {
+      // OpenAI uses hardcoded schemas (no schema discovery API)
+      result = getOpenAISchema(decodedModelId);
+    } else if (provider === "byteplus") {
+      // BytePlus uses hardcoded schemas (no schema discovery API)
+      result = getBytePlusSchema(decodedModelId);
+    } else if (provider === "elevenlabs") {
+      // ElevenLabs uses hardcoded schemas (no schema discovery API)
+      result = getElevenLabsSchema(decodedModelId);
     } else if (provider === "wavespeed") {
       // WaveSpeed uses dynamic schemas from API, with static fallback
       const apiKey = request.headers.get("X-WaveSpeed-Key") || process.env.WAVESPEED_API_KEY || null;
