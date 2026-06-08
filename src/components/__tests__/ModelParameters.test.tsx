@@ -16,6 +16,9 @@ const mockUseProviderApiKeys = vi.fn(() => ({
   falApiKey: null as string | null,
   kieApiKey: null as string | null,
   wavespeedApiKey: null as string | null,
+  openaiApiKey: null as string | null,
+  byteplusApiKey: null as string | null,
+  elevenlabsApiKey: null as string | null,
   replicateEnabled: false,
   kieEnabled: false,
 }));
@@ -721,6 +724,9 @@ describe("ModelParameters", () => {
         falApiKey: null,
         kieApiKey: null,
         wavespeedApiKey: null,
+        openaiApiKey: null,
+        byteplusApiKey: null,
+        elevenlabsApiKey: null,
         replicateEnabled: false,
         kieEnabled: false,
       });
