@@ -17,6 +17,8 @@ const GOOGLE_MODEL_MAP: Record<string, string> = {
   "gemini-3-flash-preview": "gemini-3-flash-preview",
   "gemini-3-pro-preview": "gemini-3-pro-preview",
   "gemini-3.1-pro-preview": "gemini-3.1-pro-preview",
+  "gemini-3.1-flash-lite": "gemini-3.1-flash-lite",
+  "gemini-2.5-pro": "gemini-2.5-pro",
 };
 
 const OPENAI_MODEL_MAP: Record<string, string> = {
@@ -25,6 +27,8 @@ const OPENAI_MODEL_MAP: Record<string, string> = {
 };
 
 const ANTHROPIC_MODEL_MAP: Record<string, string> = {
+  "claude-opus-4.8": "claude-opus-4-8",
+  "claude-sonnet-4.6": "claude-sonnet-4-6",
   "claude-sonnet-4.5": "claude-sonnet-4-5-20250929",
   "claude-haiku-4.5": "claude-haiku-4-5-20251001",
   "claude-opus-4.6": "claude-opus-4-6",
