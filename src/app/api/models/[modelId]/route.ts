@@ -1149,17 +1149,20 @@ function getKieSchema(modelId: string): ExtractedSchema {
  */
 function getOpenAISchema(modelId: string): ExtractedSchema {
   const promptInput: ModelInput = { name: "prompt", type: "text", required: true, label: "Prompt" };
+  // gpt-image-* models share the same parameter surface.
+  const gptImage: ExtractedSchema = {
+    parameters: [
+      { name: "size", type: "string", description: "Output size", enum: ["auto", "1024x1024", "1536x1024", "1024x1536"], default: "auto" },
+      { name: "quality", type: "string", description: "Render quality", enum: ["auto", "low", "medium", "high"], default: "auto" },
+      { name: "background", type: "string", description: "Background", enum: ["auto", "transparent", "opaque"], default: "auto" },
+      { name: "output_format", type: "string", description: "Image format", enum: ["png", "jpeg", "webp"], default: "png" },
+      { name: "n", type: "integer", description: "Number of images", minimum: 1, maximum: 10, default: 1 },
+    ],
+    inputs: [promptInput, { name: "image_urls", type: "image", required: false, label: "Reference image(s)", isArray: true }],
+  };
   const schemas: Record<string, ExtractedSchema> = {
-    "gpt-image-1": {
-      parameters: [
-        { name: "size", type: "string", description: "Output size", enum: ["auto", "1024x1024", "1536x1024", "1024x1536"], default: "auto" },
-        { name: "quality", type: "string", description: "Render quality", enum: ["auto", "low", "medium", "high"], default: "auto" },
-        { name: "background", type: "string", description: "Background", enum: ["auto", "transparent", "opaque"], default: "auto" },
-        { name: "output_format", type: "string", description: "Image format", enum: ["png", "jpeg", "webp"], default: "png" },
-        { name: "n", type: "integer", description: "Number of images", minimum: 1, maximum: 10, default: 1 },
-      ],
-      inputs: [promptInput, { name: "image_urls", type: "image", required: false, label: "Reference image(s)", isArray: true }],
-    },
+    "gpt-image-1": gptImage,
+    "gpt-image-2": gptImage,
     "dall-e-3": {
       parameters: [
         { name: "size", type: "string", description: "Output size", enum: ["1024x1024", "1792x1024", "1024x1792"], default: "1024x1024" },

@@ -509,6 +509,16 @@ const KIE_MODELS: ProviderModel[] = [
 // OpenAI image models (curated; OpenAI has no model-discovery API).
 const OPENAI_MODELS: ProviderModel[] = [
   {
+    id: "gpt-image-2",
+    name: "GPT Image 2",
+    description: "OpenAI's latest image model — higher-fidelity text-to-image and image editing.",
+    provider: "openai",
+    capabilities: ["text-to-image", "image-to-image"],
+    coverImage: undefined,
+    pricing: { type: "per-run", amount: 0.04, currency: "USD" },
+    pageUrl: "https://platform.openai.com/docs/guides/images",
+  },
+  {
     id: "gpt-image-1",
     name: "GPT Image 1",
     description: "OpenAI's image model — high-quality text-to-image and image editing.",
