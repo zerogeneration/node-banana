@@ -1180,11 +1180,16 @@ function getOpenAISchema(modelId: string): ExtractedSchema {
  * Params mirror what the @zerogen/providers BytePlus adapter consumes; unknown
  * params (resolution, seed) flow through the adapter's `extra` escape hatch.
  */
-function getBytePlusSchema(_modelId: string): ExtractedSchema {
+function getBytePlusSchema(modelId: string): ExtractedSchema {
+  // Duration ranges differ per Seedance model (BytePlus ModelArk docs + verified
+  // generations); the provider still validates server-side. Seedance 1.0 Pro has a
+  // higher lower bound than the 1.5 Pro / Dreamina 2.0 tier (4-12s).
+  const durMin = modelId.includes("seedance-1-0-pro") ? 5 : 4;
+  const durMax = modelId.includes("seedance-1-0-pro") ? 10 : 12;
   return {
     parameters: [
       { name: "ratio", type: "string", description: "Aspect ratio", enum: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], default: "16:9" },
-      { name: "durationSeconds", type: "integer", description: "Clip duration (seconds)", minimum: 3, maximum: 12, default: 5 },
+      { name: "durationSeconds", type: "integer", description: "Clip duration (seconds)", minimum: durMin, maximum: durMax, default: 5 },
       { name: "resolution", type: "string", description: "Output resolution", enum: ["480p", "720p", "1080p"], default: "720p" },
       { name: "generateAudio", type: "boolean", description: "Generate an audio track", default: false },
       { name: "seed", type: "integer", description: "Random seed (optional)", minimum: 0 },
@@ -1206,7 +1211,7 @@ function getElevenLabsSchema(modelId: string): ExtractedSchema {
     name: "outputFormat",
     type: "string",
     description: "Audio output format",
-    enum: ["mp3_44100_128", "mp3_44100_192", "mp3_22050_32", "pcm_16000", "pcm_24000"],
+    enum: ["mp3_44100_128", "mp3_44100_192", "mp3_22050_32"],
     default: "mp3_44100_128",
   };
   const promptInput: ModelInput = { name: "prompt", type: "text", required: true, label: "Prompt" };

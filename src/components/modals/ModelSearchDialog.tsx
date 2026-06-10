@@ -205,7 +205,13 @@ export function ModelSearchDialog({
     const thisVersion = ++requestVersionRef.current;
 
     // Build cache key from filters
-    const cacheKey = `${providerFilter}:${capabilityFilter}:${debouncedSearch}`;
+    // Include which provider keys are configured so the cache invalidates when a
+    // key is added/removed — otherwise newly-available providers stay hidden until
+    // the TTL expires. The added segment also invalidates pre-this-commit caches.
+    const keySig = [replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey]
+      .map((k) => (k ? "1" : "0"))
+      .join("");
+    const cacheKey = `${providerFilter}:${capabilityFilter}:${debouncedSearch}:${keySig}`;
 
     // Check localStorage cache first (skip when bypassing)
     if (!bypassCache) {
