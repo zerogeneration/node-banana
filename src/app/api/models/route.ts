@@ -511,9 +511,9 @@ const OPENAI_MODELS: ProviderModel[] = [
   {
     id: "gpt-image-2",
     name: "GPT Image 2",
-    description: "OpenAI's latest image model — higher-fidelity text-to-image and image editing.",
+    description: "OpenAI's latest image model — high-fidelity text-to-image generation.",
     provider: "openai",
-    capabilities: ["text-to-image", "image-to-image"],
+    capabilities: ["text-to-image"],
     coverImage: undefined,
     pricing: { type: "per-run", amount: 0.04, currency: "USD" },
     pageUrl: "https://platform.openai.com/docs/guides/images",
@@ -521,9 +521,9 @@ const OPENAI_MODELS: ProviderModel[] = [
   {
     id: "gpt-image-1",
     name: "GPT Image 1",
-    description: "OpenAI's image model — high-quality text-to-image and image editing.",
+    description: "OpenAI's image model — high-quality text-to-image generation.",
     provider: "openai",
-    capabilities: ["text-to-image", "image-to-image"],
+    capabilities: ["text-to-image"],
     coverImage: undefined,
     pricing: { type: "per-run", amount: 0.04, currency: "USD" },
     pageUrl: "https://platform.openai.com/docs/guides/images",

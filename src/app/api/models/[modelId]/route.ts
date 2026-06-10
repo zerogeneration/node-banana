@@ -1156,9 +1156,10 @@ function getOpenAISchema(modelId: string): ExtractedSchema {
       { name: "quality", type: "string", description: "Render quality", enum: ["auto", "low", "medium", "high"], default: "auto" },
       { name: "background", type: "string", description: "Background", enum: ["auto", "transparent", "opaque"], default: "auto" },
       { name: "output_format", type: "string", description: "Image format", enum: ["png", "jpeg", "webp"], default: "png" },
-      { name: "n", type: "integer", description: "Number of images", minimum: 1, maximum: 10, default: 1 },
     ],
-    inputs: [promptInput, { name: "image_urls", type: "image", required: false, label: "Reference image(s)", isArray: true }],
+    // Only text-to-image: the OpenAI adapter calls images.generate (no edit path),
+    // so reference images would be ignored — don't expose an image input.
+    inputs: [promptInput],
   };
   const schemas: Record<string, ExtractedSchema> = {
     "gpt-image-1": gptImage,
