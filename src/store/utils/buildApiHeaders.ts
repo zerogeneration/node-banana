@@ -18,6 +18,8 @@ const PROVIDER_HEADER_MAP: Record<ProviderType, string> = {
   wavespeed: "X-WaveSpeed-Key",
   openai: "X-OpenAI-API-Key",
   anthropic: "X-Anthropic-API-Key",
+  byteplus: "X-BytePlus-API-Key",
+  elevenlabs: "X-ElevenLabs-API-Key",
 };
 
 /**

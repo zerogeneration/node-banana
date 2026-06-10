@@ -19,19 +19,22 @@ const LLM_PROVIDERS: { value: LLMProvider; label: string }[] = [
 
 const LLM_MODELS: Record<LLMProvider, { value: LLMModelType; label: string }[]> = {
   google: [
+    { value: "gemini-3.5-flash", label: "Gemini 3.5 Flash" },
     { value: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
     { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
     { value: "gemini-3-pro-preview", label: "Gemini 3.0 Pro" },
     { value: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro" },
+    { value: "gemini-3.1-flash-lite", label: "Gemini 3.1 Flash-Lite" },
+    { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
   ],
   openai: [
     { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
     { value: "gpt-4.1-nano", label: "GPT-4.1 Nano" },
   ],
   anthropic: [
-    { value: "claude-sonnet-4.5", label: "Claude Sonnet 4.5" },
+    { value: "claude-opus-4.8", label: "Claude Opus 4.8" },
+    { value: "claude-sonnet-4.6", label: "Claude Sonnet 4.6" },
     { value: "claude-haiku-4.5", label: "Claude Haiku 4.5" },
-    { value: "claude-opus-4.6", label: "Claude Opus 4.6" },
   ],
 };
 
@@ -64,6 +67,19 @@ const WaveSpeedIcon = () => (
   </svg>
 );
 
+const BytePlusIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const ElevenLabsIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1.5" />
+    <rect x="14" y="4" width="4" height="16" rx="1.5" />
+  </svg>
+);
+
 // Get provider icon component
 const getProviderIcon = (provider: ProviderType) => {
   switch (provider) {
@@ -75,6 +91,10 @@ const getProviderIcon = (provider: ProviderType) => {
       return <FalIcon />;
     case "wavespeed":
       return <WaveSpeedIcon />;
+    case "byteplus":
+      return <BytePlusIcon />;
+    case "elevenlabs":
+      return <ElevenLabsIcon />;
     default:
       return null;
   }
@@ -165,6 +185,8 @@ export function ProjectSetupModal({
     fal: false,
     kie: false,
     wavespeed: false,
+    byteplus: false,
+    elevenlabs: false,
   });
   const [overrideActive, setOverrideActive] = useState<Record<ProviderType, boolean>>({
     gemini: false,
@@ -174,6 +196,8 @@ export function ProjectSetupModal({
     fal: false,
     kie: false,
     wavespeed: false,
+    byteplus: false,
+    elevenlabs: false,
   });
   const [envStatus, setEnvStatus] = useState<EnvStatusResponse | null>(null);
 
@@ -205,7 +229,7 @@ export function ProjectSetupModal({
 
       // Sync local providers state
       setLocalProviders(providerSettings);
-      setShowApiKey({ gemini: false, openai: false, anthropic: false, replicate: false, fal: false, kie: false, wavespeed: false });
+      setShowApiKey({ gemini: false, openai: false, anthropic: false, replicate: false, fal: false, kie: false, wavespeed: false, byteplus: false, elevenlabs: false });
       // Initialize override as active if user already has a key set
       setOverrideActive({
         gemini: !!providerSettings.providers.gemini?.apiKey,
@@ -215,6 +239,8 @@ export function ProjectSetupModal({
         fal: !!providerSettings.providers.fal?.apiKey,
         kie: !!providerSettings.providers.kie?.apiKey,
         wavespeed: !!providerSettings.providers.wavespeed?.apiKey,
+        byteplus: !!providerSettings.providers.byteplus?.apiKey,
+        elevenlabs: !!providerSettings.providers.elevenlabs?.apiKey,
       });
       setError(null);
 
@@ -314,7 +340,7 @@ export function ProjectSetupModal({
 
   const handleSaveProviders = () => {
     // Save each provider's settings
-    const providerIds: ProviderType[] = ["gemini", "openai", "anthropic", "replicate", "fal", "kie", "wavespeed"];
+    const providerIds: ProviderType[] = ["gemini", "openai", "anthropic", "replicate", "fal", "kie", "wavespeed", "byteplus", "elevenlabs"];
     for (const providerId of providerIds) {
       const local = localProviders.providers[providerId];
       const current = providerSettings.providers[providerId];
@@ -849,6 +875,102 @@ export function ProjectSetupModal({
                         onClick={() => {
                           setOverrideActive((prev) => ({ ...prev, wavespeed: false }));
                           updateLocalProvider("wavespeed", { apiKey: null });
+                        }}
+                        className="text-xs text-neutral-500 hover:text-neutral-300"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* BytePlus Provider */}
+            <div className="p-3 bg-neutral-900 rounded-lg border border-neutral-700">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-100">BytePlus</span>
+                {envStatus?.byteplus && !overrideActive.byteplus ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-green-400">Configured via .env</span>
+                    <button
+                      type="button"
+                      onClick={() => setOverrideActive((prev) => ({ ...prev, byteplus: true }))}
+                      className="px-2 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
+                    >
+                      Override
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={showApiKey.byteplus ? "text" : "password"}
+                      value={localProviders.providers.byteplus?.apiKey || ""}
+                      onChange={(e) => updateLocalProvider("byteplus", { apiKey: e.target.value || null })}
+                      placeholder="..."
+                      className="w-48 px-2 py-1 bg-neutral-800 border border-neutral-600 rounded-lg text-neutral-100 text-xs focus:outline-none focus:border-neutral-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((prev) => ({ ...prev, byteplus: !prev.byteplus }))}
+                      className="text-xs text-neutral-400 hover:text-neutral-200"
+                    >
+                      {showApiKey.byteplus ? "Hide" : "Show"}
+                    </button>
+                    {envStatus?.byteplus && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOverrideActive((prev) => ({ ...prev, byteplus: false }));
+                          updateLocalProvider("byteplus", { apiKey: null });
+                        }}
+                        className="text-xs text-neutral-500 hover:text-neutral-300"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ElevenLabs Provider */}
+            <div className="p-3 bg-neutral-900 rounded-lg border border-neutral-700">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-neutral-100">ElevenLabs</span>
+                {envStatus?.elevenlabs && !overrideActive.elevenlabs ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-green-400">Configured via .env</span>
+                    <button
+                      type="button"
+                      onClick={() => setOverrideActive((prev) => ({ ...prev, elevenlabs: true }))}
+                      className="px-2 py-1 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
+                    >
+                      Override
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={showApiKey.elevenlabs ? "text" : "password"}
+                      value={localProviders.providers.elevenlabs?.apiKey || ""}
+                      onChange={(e) => updateLocalProvider("elevenlabs", { apiKey: e.target.value || null })}
+                      placeholder="..."
+                      className="w-48 px-2 py-1 bg-neutral-800 border border-neutral-600 rounded-lg text-neutral-100 text-xs focus:outline-none focus:border-neutral-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((prev) => ({ ...prev, elevenlabs: !prev.elevenlabs }))}
+                      className="text-xs text-neutral-400 hover:text-neutral-200"
+                    >
+                      {showApiKey.elevenlabs ? "Hide" : "Show"}
+                    </button>
+                    {envStatus?.elevenlabs && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOverrideActive((prev) => ({ ...prev, elevenlabs: false }));
+                          updateLocalProvider("elevenlabs", { apiKey: null });
                         }}
                         className="text-xs text-neutral-500 hover:text-neutral-300"
                       >

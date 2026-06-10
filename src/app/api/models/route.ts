@@ -1,13 +1,14 @@
 /**
  * Unified Models API Endpoint
  *
- * Aggregates models from all configured providers (Replicate, fal.ai, Gemini, WaveSpeed).
- * Uses in-memory caching to reduce external API calls.
+ * Aggregates models from all configured providers (Gemini, Replicate, fal.ai, Kie.ai,
+ * WaveSpeed, OpenAI, BytePlus, ElevenLabs). Uses in-memory caching to reduce external API calls.
  *
  * GET /api/models
  *
  * Query params:
- *   - provider: Optional, filter to specific provider ("replicate" | "fal" | "gemini" | "wavespeed")
+ *   - provider: Optional, filter to specific provider
+ *     ("gemini" | "replicate" | "fal" | "kie" | "wavespeed" | "openai" | "byteplus" | "elevenlabs")
  *   - search: Optional, search query
  *   - refresh: Optional, bypass cache if "true"
  *   - capabilities: Optional, filter by capabilities (comma-separated)
@@ -15,7 +16,11 @@
  * Headers:
  *   - X-Replicate-Key: Replicate API key
  *   - X-Fal-Key: fal.ai API key (optional, works without but rate limited)
+ *   - X-Kie-Key: Kie.ai API key
  *   - X-WaveSpeed-Key: WaveSpeed API key
+ *   - X-OpenAI-API-Key: OpenAI API key
+ *   - X-BytePlus-API-Key: BytePlus API key (ARK_API_KEY env also accepted)
+ *   - X-ElevenLabs-API-Key: ElevenLabs API key
  *
  * Response:
  *   {
@@ -501,6 +506,113 @@ const KIE_MODELS: ProviderModel[] = [
 ];
 
 // Gemini image models (hardcoded - these don't come from an external API)
+// OpenAI image models (curated; OpenAI has no model-discovery API).
+const OPENAI_MODELS: ProviderModel[] = [
+  {
+    id: "gpt-image-2",
+    name: "GPT Image 2",
+    description: "OpenAI's latest image model — high-fidelity text-to-image generation.",
+    provider: "openai",
+    capabilities: ["text-to-image"],
+    coverImage: undefined,
+    pricing: { type: "per-run", amount: 0.04, currency: "USD" },
+    pageUrl: "https://platform.openai.com/docs/guides/images",
+  },
+  {
+    id: "gpt-image-1",
+    name: "GPT Image 1",
+    description: "OpenAI's image model — high-quality text-to-image generation.",
+    provider: "openai",
+    capabilities: ["text-to-image"],
+    coverImage: undefined,
+    pricing: { type: "per-run", amount: 0.04, currency: "USD" },
+    pageUrl: "https://platform.openai.com/docs/guides/images",
+  },
+  {
+    id: "dall-e-3",
+    name: "DALL·E 3",
+    description: "Text-to-image generation with strong prompt adherence.",
+    provider: "openai",
+    capabilities: ["text-to-image"],
+    coverImage: undefined,
+    pricing: { type: "per-run", amount: 0.04, currency: "USD" },
+    pageUrl: "https://platform.openai.com/docs/guides/images",
+  },
+];
+
+// BytePlus Seedance video models (curated; ids verified against byteplus-js).
+const BYTEPLUS_MODELS: ProviderModel[] = [
+  {
+    id: "seedance-1-5-pro-251215",
+    name: "Seedance 1.5 Pro",
+    description: "BytePlus Seedance 1.5 Pro — text-to-video and image-to-video.",
+    provider: "byteplus",
+    capabilities: ["text-to-video", "image-to-video"],
+    coverImage: undefined,
+    pageUrl: "https://docs.byteplus.com/en/docs/ModelArk",
+  },
+  {
+    id: "seedance-1-0-pro-250528",
+    name: "Seedance 1.0 Pro",
+    description: "BytePlus Seedance 1.0 Pro — text-to-video and image-to-video.",
+    provider: "byteplus",
+    capabilities: ["text-to-video", "image-to-video"],
+    coverImage: undefined,
+    pageUrl: "https://docs.byteplus.com/en/docs/ModelArk",
+  },
+  {
+    id: "dreamina-seedance-2-0-260128",
+    name: "Seedance 2.0 (Dreamina)",
+    description: "BytePlus Dreamina Seedance 2.0 — text-to-video and image-to-video.",
+    provider: "byteplus",
+    capabilities: ["text-to-video", "image-to-video"],
+    coverImage: undefined,
+    pageUrl: "https://docs.byteplus.com/en/docs/ModelArk",
+  },
+  {
+    id: "dreamina-seedance-2-0-fast-260128",
+    name: "Seedance 2.0 Fast (Dreamina)",
+    description: "Faster, lower-cost variant of Dreamina Seedance 2.0.",
+    provider: "byteplus",
+    capabilities: ["text-to-video", "image-to-video"],
+    coverImage: undefined,
+    pageUrl: "https://docs.byteplus.com/en/docs/ModelArk",
+  },
+];
+
+// ElevenLabs audio models (curated). node-banana tags all audio as
+// "text-to-audio"; the @zerogen/providers binding routes speech/music/sfx by
+// model id, so these ids must be kept exactly.
+const ELEVENLABS_MODELS: ProviderModel[] = [
+  {
+    id: "eleven_multilingual_v2",
+    name: "Eleven Multilingual v2 (Speech)",
+    description: "Text-to-speech. Choose the voice via the voiceId parameter.",
+    provider: "elevenlabs",
+    capabilities: ["text-to-audio"],
+    coverImage: undefined,
+    pageUrl: "https://elevenlabs.io/docs",
+  },
+  {
+    id: "music_v1",
+    name: "ElevenLabs Music",
+    description: "Generate music from a text prompt.",
+    provider: "elevenlabs",
+    capabilities: ["text-to-audio"],
+    coverImage: undefined,
+    pageUrl: "https://elevenlabs.io/docs",
+  },
+  {
+    id: "eleven_text_to_sound_v2",
+    name: "Sound Effects v2",
+    description: "Generate sound effects from a text prompt.",
+    provider: "elevenlabs",
+    capabilities: ["text-to-audio"],
+    coverImage: undefined,
+    pageUrl: "https://elevenlabs.io/docs",
+  },
+];
+
 const GEMINI_IMAGE_MODELS: ProviderModel[] = [
   {
     id: "nano-banana",
@@ -1098,6 +1210,10 @@ export async function GET(
   const falKey = request.headers.get("X-Fal-Key") || process.env.FAL_API_KEY || null;
   const kieKey = request.headers.get("X-Kie-Key") || process.env.KIE_API_KEY || null;
   const wavespeedKey = request.headers.get("X-WaveSpeed-Key") || process.env.WAVESPEED_API_KEY || null;
+  const openaiKey = request.headers.get("X-OpenAI-API-Key") || process.env.OPENAI_API_KEY || null;
+  const byteplusKey =
+    request.headers.get("X-BytePlus-API-Key") || process.env.BYTEPLUS_API_KEY || process.env.ARK_API_KEY || null;
+  const elevenlabsKey = request.headers.get("X-ElevenLabs-API-Key") || process.env.ELEVENLABS_API_KEY || null;
 
   // Build list of all available providers (have keys from env or client headers)
   const availableProviders: string[] = ["gemini"]; // Gemini always available
@@ -1105,11 +1221,17 @@ export async function GET(
   if (replicateKey) availableProviders.push("replicate");
   if (kieKey) availableProviders.push("kie");
   if (wavespeedKey) availableProviders.push("wavespeed");
+  if (openaiKey) availableProviders.push("openai");
+  if (byteplusKey) availableProviders.push("byteplus");
+  if (elevenlabsKey) availableProviders.push("elevenlabs");
 
   // Determine which providers to fetch from (excluding gemini/kie - handled separately as hardcoded)
   const providersToFetch: ProviderType[] = [];
   let includeGemini = false;
   let includeKie = false;
+  let includeOpenai = false;
+  let includeByteplus = false;
+  let includeElevenlabs = false;
 
   if (providerFilter) {
     if (providerFilter === "gemini") {
@@ -1147,6 +1269,42 @@ export async function GET(
       providersToFetch.push("replicate");
     } else if (providerFilter === "fal" && falKey) {
       providersToFetch.push("fal");
+    } else if (providerFilter === "openai") {
+      if (openaiKey) {
+        includeOpenai = true;
+      } else {
+        return NextResponse.json<ModelsErrorResponse>(
+          {
+            success: false,
+            error: "OpenAI API key required. Add OPENAI_API_KEY to .env.local or configure in Settings.",
+          },
+          { status: 400 }
+        );
+      }
+    } else if (providerFilter === "byteplus") {
+      if (byteplusKey) {
+        includeByteplus = true;
+      } else {
+        return NextResponse.json<ModelsErrorResponse>(
+          {
+            success: false,
+            error: "BytePlus API key required. Add BYTEPLUS_API_KEY to .env.local or configure in Settings.",
+          },
+          { status: 400 }
+        );
+      }
+    } else if (providerFilter === "elevenlabs") {
+      if (elevenlabsKey) {
+        includeElevenlabs = true;
+      } else {
+        return NextResponse.json<ModelsErrorResponse>(
+          {
+            success: false,
+            error: "ElevenLabs API key required. Add ELEVENLABS_API_KEY to .env.local or configure in Settings.",
+          },
+          { status: 400 }
+        );
+      }
     }
   } else {
     // Include all providers that have keys configured
@@ -1161,15 +1319,31 @@ export async function GET(
     if (falKey) {
       providersToFetch.push("fal");
     }
+    if (openaiKey) {
+      includeOpenai = true;
+    }
+    if (byteplusKey) {
+      includeByteplus = true;
+    }
+    if (elevenlabsKey) {
+      includeElevenlabs = true;
+    }
   }
 
   // Gemini and Kie are always available (with key for Kie), so we don't fail if no external providers
-  if (providersToFetch.length === 0 && !includeGemini && !includeKie) {
+  if (
+    providersToFetch.length === 0 &&
+    !includeGemini &&
+    !includeKie &&
+    !includeOpenai &&
+    !includeByteplus &&
+    !includeElevenlabs
+  ) {
     return NextResponse.json<ModelsErrorResponse>(
       {
         success: false,
         error:
-          "No providers available. Add REPLICATE_API_KEY, FAL_API_KEY, KIE_API_KEY, or WAVESPEED_API_KEY to .env.local or configure in Settings.",
+          "No providers available. Add OPENAI_API_KEY, BYTEPLUS_API_KEY, ELEVENLABS_API_KEY, REPLICATE_API_KEY, FAL_API_KEY, KIE_API_KEY, or WAVESPEED_API_KEY to .env.local or configure in Settings.",
       },
       { status: 400 }
     );
@@ -1209,6 +1383,51 @@ export async function GET(
       success: true,
       count: kieModels.length,
       cached: true, // Hardcoded models are effectively "cached"
+    };
+    anyFromCache = true;
+  }
+
+  // Add OpenAI models if included (hardcoded, no API call needed)
+  if (includeOpenai) {
+    let openaiModels = OPENAI_MODELS;
+    if (searchQuery) {
+      openaiModels = filterModelsBySearch(openaiModels, searchQuery);
+    }
+    allModels.push(...openaiModels);
+    providerResults["openai"] = {
+      success: true,
+      count: openaiModels.length,
+      cached: true,
+    };
+    anyFromCache = true;
+  }
+
+  // Add BytePlus models if included (hardcoded, no API call needed)
+  if (includeByteplus) {
+    let byteplusModels = BYTEPLUS_MODELS;
+    if (searchQuery) {
+      byteplusModels = filterModelsBySearch(byteplusModels, searchQuery);
+    }
+    allModels.push(...byteplusModels);
+    providerResults["byteplus"] = {
+      success: true,
+      count: byteplusModels.length,
+      cached: true,
+    };
+    anyFromCache = true;
+  }
+
+  // Add ElevenLabs models if included (hardcoded, no API call needed)
+  if (includeElevenlabs) {
+    let elevenlabsModels = ELEVENLABS_MODELS;
+    if (searchQuery) {
+      elevenlabsModels = filterModelsBySearch(elevenlabsModels, searchQuery);
+    }
+    allModels.push(...elevenlabsModels);
+    providerResults["elevenlabs"] = {
+      success: true,
+      count: elevenlabsModels.length,
+      cached: true,
     };
     anyFromCache = true;
   }

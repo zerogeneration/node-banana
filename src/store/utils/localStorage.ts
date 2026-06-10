@@ -53,6 +53,8 @@ export const defaultProviderSettings: ProviderSettings = {
     fal: { id: "fal", name: "fal.ai", enabled: false, apiKey: null, apiKeyEnvVar: "FAL_API_KEY" },
     kie: { id: "kie", name: "Kie.ai", enabled: false, apiKey: null, apiKeyEnvVar: "KIE_API_KEY" },
     wavespeed: { id: "wavespeed", name: "WaveSpeed", enabled: false, apiKey: null, apiKeyEnvVar: "WAVESPEED_API_KEY" },
+    byteplus: { id: "byteplus", name: "BytePlus", enabled: false, apiKey: null, apiKeyEnvVar: "BYTEPLUS_API_KEY" },
+    elevenlabs: { id: "elevenlabs", name: "ElevenLabs", enabled: false, apiKey: null, apiKeyEnvVar: "ELEVENLABS_API_KEY" },
   }
 };
 

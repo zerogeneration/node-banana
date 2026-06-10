@@ -76,6 +76,25 @@ const WaveSpeedIcon = () => (
   </svg>
 );
 
+const OpenAIIcon = () => (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z" />
+  </svg>
+);
+
+const BytePlusIcon = () => (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const ElevenLabsIcon = () => (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1.5" />
+    <rect x="14" y="4" width="4" height="16" rx="1.5" />
+  </svg>
+);
+
 // Get the center of the React Flow pane in screen coordinates
 function getPaneCenter() {
   const pane = document.querySelector(".react-flow");
@@ -135,7 +154,7 @@ export function ModelSearchDialog({
     trackModelUsage,
   } = useWorkflowStore();
   // Use stable selector for API keys to prevent unnecessary re-fetches
-  const { replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey } = useProviderApiKeys();
+  const { replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey } = useProviderApiKeys();
   const { screenToFlowPosition } = useReactFlow();
 
   // State
@@ -186,7 +205,13 @@ export function ModelSearchDialog({
     const thisVersion = ++requestVersionRef.current;
 
     // Build cache key from filters
-    const cacheKey = `${providerFilter}:${capabilityFilter}:${debouncedSearch}`;
+    // Include which provider keys are configured so the cache invalidates when a
+    // key is added/removed — otherwise newly-available providers stay hidden until
+    // the TTL expires. The added segment also invalidates pre-this-commit caches.
+    const keySig = [replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey]
+      .map((k) => (k ? "1" : "0"))
+      .join("");
+    const cacheKey = `${providerFilter}:${capabilityFilter}:${debouncedSearch}:${keySig}`;
 
     // Check localStorage cache first (skip when bypassing)
     if (!bypassCache) {
@@ -241,6 +266,15 @@ export function ModelSearchDialog({
       if (wavespeedApiKey) {
         headers["X-WaveSpeed-Key"] = wavespeedApiKey;
       }
+      if (openaiApiKey) {
+        headers["X-OpenAI-API-Key"] = openaiApiKey;
+      }
+      if (byteplusApiKey) {
+        headers["X-BytePlus-API-Key"] = byteplusApiKey;
+      }
+      if (elevenlabsApiKey) {
+        headers["X-ElevenLabs-API-Key"] = elevenlabsApiKey;
+      }
 
       const response = await deduplicatedFetch(`/api/models?${params.toString()}`, {
         headers,
@@ -278,7 +312,7 @@ export function ModelSearchDialog({
         setIsLoading(false);
       }
     }
-  }, [debouncedSearch, providerFilter, capabilityFilter, replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey]);
+  }, [debouncedSearch, providerFilter, capabilityFilter, replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey]);
 
   // Fetch models when filters change
   useEffect(() => {
@@ -402,6 +436,12 @@ export function ModelSearchDialog({
         return "bg-orange-500/20 text-orange-300";
       case "wavespeed":
         return "bg-purple-500/20 text-purple-300";
+      case "openai":
+        return "bg-cyan-500/20 text-cyan-300";
+      case "byteplus":
+        return "bg-indigo-500/20 text-indigo-300";
+      case "elevenlabs":
+        return "bg-rose-500/20 text-rose-300";
       default:
         return "bg-neutral-500/20 text-neutral-300";
     }
@@ -420,6 +460,12 @@ export function ModelSearchDialog({
         return "Kie.ai";
       case "wavespeed":
         return "WaveSpeed";
+      case "openai":
+        return "OpenAI";
+      case "byteplus":
+        return "BytePlus";
+      case "elevenlabs":
+        return "ElevenLabs";
       default:
         return provider;
     }
@@ -432,12 +478,15 @@ export function ModelSearchDialog({
     if (replicateApiKey) providers.add("replicate");
     if (kieApiKey) providers.add("kie");
     if (wavespeedApiKey) providers.add("wavespeed");
+    if (openaiApiKey) providers.add("openai");
+    if (byteplusApiKey) providers.add("byteplus");
+    if (elevenlabsApiKey) providers.add("elevenlabs");
     // Server-side keys (from env vars, reported by /api/models)
     for (const p of serverAvailableProviders) {
       providers.add(p as ProviderType);
     }
     return providers;
-  }, [replicateApiKey, kieApiKey, wavespeedApiKey, serverAvailableProviders]);
+  }, [replicateApiKey, kieApiKey, wavespeedApiKey, openaiApiKey, byteplusApiKey, elevenlabsApiKey, serverAvailableProviders]);
 
   // Reset provider filter if current selection becomes unavailable
   useEffect(() => {
@@ -706,6 +755,45 @@ export function ModelSearchDialog({
                   }`}
                 >
                   <WaveSpeedIcon />
+                </button>
+              )}
+              {availableProviders.has("openai") && (
+                <button
+                  onClick={() => setProviderFilter("openai")}
+                  title="OpenAI"
+                  className={`p-2 rounded transition-colors ${
+                    providerFilter === "openai"
+                      ? "bg-cyan-500/20 text-cyan-300"
+                      : "text-neutral-400 hover:text-cyan-300 hover:bg-neutral-700"
+                  }`}
+                >
+                  <OpenAIIcon />
+                </button>
+              )}
+              {availableProviders.has("byteplus") && (
+                <button
+                  onClick={() => setProviderFilter("byteplus")}
+                  title="BytePlus"
+                  className={`p-2 rounded transition-colors ${
+                    providerFilter === "byteplus"
+                      ? "bg-indigo-500/20 text-indigo-300"
+                      : "text-neutral-400 hover:text-indigo-300 hover:bg-neutral-700"
+                  }`}
+                >
+                  <BytePlusIcon />
+                </button>
+              )}
+              {availableProviders.has("elevenlabs") && (
+                <button
+                  onClick={() => setProviderFilter("elevenlabs")}
+                  title="ElevenLabs"
+                  className={`p-2 rounded transition-colors ${
+                    providerFilter === "elevenlabs"
+                      ? "bg-rose-500/20 text-rose-300"
+                      : "text-neutral-400 hover:text-rose-300 hover:bg-neutral-700"
+                  }`}
+                >
+                  <ElevenLabsIcon />
                 </button>
               )}
             </div>

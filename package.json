@@ -19,6 +19,7 @@
     "@react-three/fiber": "^9.5.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@xyflow/react": "^12.9.3",
+    "@zerogen/providers": "file:vendor/zerogen-providers-0.1.0.tgz",
     "ai": "^6.0.49",
     "autoprefixer": "^10.4.22",
     "jszip": "^3.10.1",

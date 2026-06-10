@@ -103,6 +103,9 @@ export interface ApiKeys {
   fal?: string;
   gemini?: string;
   wavespeed?: string;
+  byteplus?: string;
+  openai?: string;
+  elevenlabs?: string;
 }
 
 /**

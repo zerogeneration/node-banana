@@ -10,6 +10,8 @@ function makeSettings(overrides: Partial<Record<string, { apiKey: string | null 
     kie: { id: "kie", name: "Kie.ai", enabled: true, apiKey: null },
     wavespeed: { id: "wavespeed", name: "WaveSpeed", enabled: true, apiKey: null },
     openai: { id: "openai", name: "OpenAI", enabled: true, apiKey: null },
+    byteplus: { id: "byteplus", name: "BytePlus", enabled: true, apiKey: null },
+    elevenlabs: { id: "elevenlabs", name: "ElevenLabs", enabled: true, apiKey: null },
   };
   for (const [key, val] of Object.entries(overrides)) {
     if (defaults[key]) {
@@ -53,6 +55,24 @@ describe("buildGenerateHeaders", () => {
     const settings = makeSettings({ wavespeed: { apiKey: "ws-key" } });
     const headers = buildGenerateHeaders("wavespeed", settings);
     expect(headers["X-WaveSpeed-Key"]).toBe("ws-key");
+  });
+
+  it("should add OpenAI API key header", () => {
+    const settings = makeSettings({ openai: { apiKey: "oai-key" } });
+    const headers = buildGenerateHeaders("openai", settings);
+    expect(headers["X-OpenAI-API-Key"]).toBe("oai-key");
+  });
+
+  it("should add BytePlus API key header", () => {
+    const settings = makeSettings({ byteplus: { apiKey: "bp-key" } });
+    const headers = buildGenerateHeaders("byteplus", settings);
+    expect(headers["X-BytePlus-API-Key"]).toBe("bp-key");
+  });
+
+  it("should add ElevenLabs API key header", () => {
+    const settings = makeSettings({ elevenlabs: { apiKey: "el-key" } });
+    const headers = buildGenerateHeaders("elevenlabs", settings);
+    expect(headers["X-ElevenLabs-API-Key"]).toBe("el-key");
   });
 
   it("should not add header when API key is null", () => {
