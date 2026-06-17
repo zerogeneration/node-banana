@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 /**
  * Route-wiring tests for the BytePlus / OpenAI / ElevenLabs dispatch branches in
  * /api/generate. The actual input/output mapping lives in (and is unit-tested by)
- * @zerogen/providers/node-banana, so here we mock the per-provider modules and
+ * @zerospacestudios/providers/node-banana, so here we mock the per-provider modules and
  * assert that route.ts: reads the BYOK header/env, builds the GenerationInput,
  * dispatches to the right binding, and serializes the output with buildMediaResponse.
  */
