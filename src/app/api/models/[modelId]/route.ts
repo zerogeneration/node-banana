@@ -1186,9 +1186,12 @@ function getOpenAISchema(modelId: string): ExtractedSchema {
  */
 function getBytePlusSchema(modelId: string): ExtractedSchema {
   // Seedream image (text-to-image / image-to-image). `size` is a free-form WxH
-  // string (byteplus-js: e.g. "2048x2048"); `n` maps to Seedream's sequential
-  // batch; `seed` flows through `extra`. No output_format — Seedream ignores it
-  // and the adapter labels the returned bytes by their actual content.
+  // string (byteplus-js: e.g. "2048x2048"); `seed` flows through the adapter's
+  // `extra` escape hatch. No `output_format` — Seedream ignores it and the
+  // adapter labels the returned bytes by their actual content. No `n`/batch:
+  // the generate route returns only outputs[0] and the image node records a
+  // single image, so n>1 would just burn credits — omit until multi-output is
+  // surfaced in the UI/history.
   if (modelId.toLowerCase().includes("seedream")) {
     return {
       parameters: [
@@ -1199,7 +1202,6 @@ function getBytePlusSchema(modelId: string): ExtractedSchema {
           enum: ["2048x2048", "2304x1728", "1728x2304", "2560x1440", "1440x2560"],
           default: "2048x2048",
         },
-        { name: "n", type: "integer", description: "Number of images (node-banana shows the first)", minimum: 1, maximum: 4, default: 1 },
         { name: "seed", type: "integer", description: "Random seed (optional)", minimum: 0 },
       ],
       inputs: [
