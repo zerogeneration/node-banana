@@ -1,0 +1,71 @@
+# CI for node-banana.
+#
+# Installs the private @zerospacestudios/providers dependency (GitHub Packages)
+# with the built-in GITHUB_TOKEN — no PAT to manage — which the committed root
+# .npmrc consumes via ${NODE_AUTH_TOKEN}. The `packages: read` permission lets
+# GITHUB_TOKEN download it.
+#
+# NOTE: GITHUB_TOKEN can read same-owner packages only if the package grants this
+# repo access (package -> Settings -> Manage Actions access). If access is denied
+# the `npm ci` step 401s — point that step at a fine-grained PAT secret instead.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read # lets GITHUB_TOKEN download the private dependency
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build
+        run: npm run build
+
+  test:
+    name: Tests (non-blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Non-blocking for now: the suite has platform-specific tests (open -R/macOS,
+      # xdg-open/Linux, /etc + Windows path traversal). This surfaces the real
+      # ubuntu baseline without gating merges. Once the suite is green on Linux,
+      # remove `continue-on-error` to make it a blocking gate.
+      - name: Tests (vitest)
+        id: vitest
+        run: npm run test:run
+        continue-on-error: true
+      - name: Report test outcome
+        if: always()
+        run: |
+          echo "Vitest outcome: **${{ steps.vitest.outcome }}**" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.vitest.outcome }}" != "success" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "⚠️ Tests are non-blocking for now (platform-specific baseline). See the job logs for the failing cases." >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -97,9 +97,9 @@ npm install
 **CI / Vercel:** set `NODE_AUTH_TOKEN` to a `read:packages` token as a build-time
 environment variable.
 
-- **GitHub Actions:** prefer the built-in token — no PAT to manage. See the
-  ready-to-drop [`ci.yml.example`](.github/workflows/ci.yml.example): set
-  `permissions: { packages: read }` and `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
+- **GitHub Actions:** prefer the built-in token — no PAT to manage. The
+  [`ci.yml`](.github/workflows/ci.yml) workflow sets `permissions: { packages: read }`
+  and `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` on install.
 - **Vercel (or other hosts):** add a fine-grained PAT scoped to the org's
   packages as the `NODE_AUTH_TOKEN` env var (all environments). Without it,
   `npm install` — and therefore the build — fails with a 401 from
