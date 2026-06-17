@@ -1,0 +1,72 @@
+# CI for node-banana.
+#
+# Installs the private @zerospacestudios/providers dependency (GitHub Packages)
+# with the built-in GITHUB_TOKEN — no PAT to manage — which the committed root
+# .npmrc consumes via ${NODE_AUTH_TOKEN}. The `packages: read` permission lets
+# GITHUB_TOKEN download it.
+#
+# NOTE: GITHUB_TOKEN can read same-owner packages only if the package grants this
+# repo access (package -> Settings -> Manage Actions access). If access is denied
+# the `npm ci` step 401s — point that step at a fine-grained PAT secret instead.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read # lets GITHUB_TOKEN download the private dependency
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (gate)
+    # Public repo + PRIVATE dependency installed with a packages:read token:
+    # run only on pushes and same-repo (non-fork) PRs, so fork-controlled code
+    # never receives the registry token and never restores the npm cache (which
+    # holds the private tarball). Fork PRs are validated post-merge by the push
+    # run on master.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build
+        run: npm run build
+
+  test:
+    name: Tests
+    # Same trusted-ref gate as build (see above): no token or cache for fork PRs.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Blocking gate. The full suite is green on ubuntu — the ~28 failures seen
+      # on Windows are platform-specific (open -R/macOS, xdg-open/Linux, /etc +
+      # path-separator tests), and CI runs on ubuntu.
+      - name: Tests (vitest)
+        run: npm run test:run
