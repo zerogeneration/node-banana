@@ -1203,7 +1203,10 @@ function getBytePlusSchema(modelId: string): ExtractedSchema {
         { name: "seed", type: "integer", description: "Random seed (optional)", minimum: 0 },
       ],
       inputs: [
-        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        // Prompt is required: the image-node executor (executeNanoBanana) rejects an
+        // empty prompt before dispatch, so an image-only invocation can't reach the
+        // provider. image_urls stays optional (text-to-image needs no reference).
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
         { name: "image_urls", type: "image", required: false, label: "Reference image", isArray: true },
       ],
     };
