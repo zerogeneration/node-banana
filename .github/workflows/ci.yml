@@ -26,6 +26,14 @@ concurrency:
 jobs:
   build:
     name: Build (gate)
+    # Public repo + PRIVATE dependency installed with a packages:read token:
+    # run only on pushes and same-repo (non-fork) PRs, so fork-controlled code
+    # never receives the registry token and never restores the npm cache (which
+    # holds the private tarball). Fork PRs are validated post-merge by the push
+    # run on master.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +50,10 @@ jobs:
 
   test:
     name: Tests
+    # Same trusted-ref gate as build (see above): no token or cache for fork PRs.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
