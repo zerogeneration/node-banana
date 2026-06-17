@@ -105,6 +105,10 @@ environment variable.
   `npm install` — and therefore the build — fails with a 401 from
   `npm.pkg.github.com`.
 
+> **Bypassing the guard:** the `preinstall` check only looks for `NODE_AUTH_TOKEN`.
+> If you authenticate the `@zerospacestudios` scope some other way (e.g. a
+> user-level `~/.npmrc`), set `SKIP_REGISTRY_AUTH_CHECK=1` to skip the check.
+
 ### Environment Variables
 
 Create a `.env.local` file in the root directory:
