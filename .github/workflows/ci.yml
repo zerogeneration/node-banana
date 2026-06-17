@@ -41,7 +41,7 @@ jobs:
         run: npm run build
 
   test:
-    name: Tests (non-blocking)
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,19 +53,8 @@ jobs:
         run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Non-blocking for now: the suite has platform-specific tests (open -R/macOS,
-      # xdg-open/Linux, /etc + Windows path traversal). This surfaces the real
-      # ubuntu baseline without gating merges. Once the suite is green on Linux,
-      # remove `continue-on-error` to make it a blocking gate.
+      # Blocking gate. The full suite is green on ubuntu — the ~28 failures seen
+      # on Windows are platform-specific (open -R/macOS, xdg-open/Linux, /etc +
+      # path-separator tests), and CI runs on ubuntu.
       - name: Tests (vitest)
-        id: vitest
         run: npm run test:run
-        continue-on-error: true
-      - name: Report test outcome
-        if: always()
-        run: |
-          echo "Vitest outcome: **${{ steps.vitest.outcome }}**" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ steps.vitest.outcome }}" != "success" ]; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "⚠️ Tests are non-blocking for now (platform-specific baseline). See the job logs for the failing cases." >> "$GITHUB_STEP_SUMMARY"
-          fi
