@@ -158,7 +158,7 @@ npm run test:coverage # With coverage report
 
 ## Contributing
 
-PRs are welcome! Fork the repo, branch from `develop`, and open a PR back to `develop`.
+PRs are welcome! Fork the repo, branch from `master`, and open a PR back to `master`.
 
 This is primarily built for my own workflows — if a PR conflicts with my plans I'll politely decline. For larger contributions, join the [Discord](https://discord.com/invite/89Nr6EKkTf) to coordinate first.
 
