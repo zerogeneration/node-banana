@@ -1,22 +1,26 @@
 /**
- * Preinstall guard: fail fast (with the fix) when the GitHub Packages token
- * needed to install the private `@zerospacestudios/providers` dependency is
- * missing. The root `.npmrc` reads `${NODE_AUTH_TOKEN}`; without it, `npm install`
- * dies with an opaque 401 from npm.pkg.github.com. Catching it here turns that
- * into an actionable message.
+ * Auth preflight for the private `@zerospacestudios/providers` dependency
+ * (GitHub Packages). Run `npm run check:auth` before `npm install`, or as a CI
+ * pre-install step, to confirm NODE_AUTH_TOKEN is set — the committed `.npmrc`
+ * consumes it via `${NODE_AUTH_TOKEN}`, and without it `npm install` fails with
+ * an opaque 401/403 from npm.pkg.github.com.
  *
- * Set SKIP_REGISTRY_AUTH_CHECK=1 to bypass (e.g. if you authenticate the
- * @zerospacestudios scope some other way, such as a user-level ~/.npmrc).
+ * This is intentionally a standalone command, not a `preinstall` hook: npm
+ * resolves and fetches dependencies before lifecycle scripts run, so a hook
+ * can't fail before the registry request it would guard (verified on npm 11).
  */
-if (process.env.SKIP_REGISTRY_AUTH_CHECK) process.exit(0);
-if (process.env.NODE_AUTH_TOKEN && process.env.NODE_AUTH_TOKEN.trim()) process.exit(0);
+if (process.env.NODE_AUTH_TOKEN && process.env.NODE_AUTH_TOKEN.trim()) {
+  console.log("✔ NODE_AUTH_TOKEN is set — GitHub Packages install should authenticate.");
+  process.exit(0);
+}
 
 console.error(`
 ✖ NODE_AUTH_TOKEN is not set.
 
   node-banana installs the private package @zerospacestudios/providers from
   GitHub Packages, which needs a read:packages token exposed as NODE_AUTH_TOKEN
-  (consumed by the repo's .npmrc).
+  (consumed by the repo's .npmrc). It overrides any ~/.npmrc token for this
+  registry, so it must be set here.
 
   Local dev (the gh login carries read:packages):
     export NODE_AUTH_TOKEN="$(gh auth token)"
@@ -28,7 +32,5 @@ console.error(`
     set NODE_AUTH_TOKEN to a read:packages token as a build env var.
     GitHub Actions: NODE_AUTH_TOKEN=\${{ secrets.GITHUB_TOKEN }} with
     permissions: { packages: read } (no PAT to manage).
-
-  (Set SKIP_REGISTRY_AUTH_CHECK=1 to bypass if you authenticate another way.)
 `);
 process.exit(1);

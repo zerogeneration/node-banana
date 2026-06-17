@@ -83,8 +83,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 `npm install` pulls one **private** dependency — `@zerospacestudios/providers`
 (the AI provider binding) — from GitHub Packages, so it needs a `read:packages`
 token exposed as `NODE_AUTH_TOKEN`. The repo's committed `.npmrc` reads it from
-the environment — **never commit a real token**. A `preinstall` check fails fast
-with this guidance if it's missing.
+the environment — **never commit a real token**. That project-level entry takes
+precedence over any `~/.npmrc`, so `NODE_AUTH_TOKEN` must be set even if you
+already have a user-level GitHub Packages token.
 
 ```bash
 # local dev (the gh login already carries read:packages):
@@ -105,9 +106,11 @@ environment variable.
   `npm install` — and therefore the build — fails with a 401 from
   `npm.pkg.github.com`.
 
-> **Bypassing the guard:** the `preinstall` check only looks for `NODE_AUTH_TOKEN`.
-> If you authenticate the `@zerospacestudios` scope some other way (e.g. a
-> user-level `~/.npmrc`), set `SKIP_REGISTRY_AUTH_CHECK=1` to skip the check.
+> **Verify before installing:** run `npm run check:auth` to confirm
+> `NODE_AUTH_TOKEN` is set (it prints the fix if not). It's a standalone command
+> rather than a `preinstall` hook because npm resolves and fetches dependencies
+> *before* lifecycle scripts run — a hook can't fail before the registry request
+> it would guard.
 
 ### Environment Variables
 
