@@ -540,8 +540,20 @@ const OPENAI_MODELS: ProviderModel[] = [
   },
 ];
 
-// BytePlus Seedance video models (curated; ids verified against byteplus-js).
+// BytePlus image (Seedream) + video (Seedance) models (curated; ids verified
+// against @zerospacestudios/providers defaults.js and byteplus-js). The binding
+// routes by the "seedream" substring in the id ("seedream" → image port, every
+// other id → video), so these ids must be kept exactly.
 const BYTEPLUS_MODELS: ProviderModel[] = [
+  {
+    id: "seedream-5-0-lite-260128",
+    name: "Seedream 5.0 Lite",
+    description: "BytePlus Seedream 5.0 Lite — text-to-image and image-to-image.",
+    provider: "byteplus",
+    capabilities: ["text-to-image", "image-to-image"],
+    coverImage: undefined,
+    pageUrl: "https://docs.byteplus.com/en/docs/ModelArk",
+  },
   {
     id: "seedance-1-5-pro-251215",
     name: "Seedance 1.5 Pro",
@@ -581,7 +593,7 @@ const BYTEPLUS_MODELS: ProviderModel[] = [
 ];
 
 // ElevenLabs audio models (curated). node-banana tags all audio as
-// "text-to-audio"; the @zerogen/providers binding routes speech/music/sfx by
+// "text-to-audio"; the @zerospacestudios/providers binding routes speech/music/sfx by
 // model id, so these ids must be kept exactly.
 const ELEVENLABS_MODELS: ProviderModel[] = [
   {

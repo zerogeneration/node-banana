@@ -63,7 +63,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const generationsPath = useWorkflowStore((state) => state.generationsPath);
   // Use stable selector for API keys to prevent unnecessary re-fetches
-  const { replicateApiKey, falApiKey, kieApiKey, replicateEnabled, kieEnabled } = useProviderApiKeys();
+  const { replicateApiKey, falApiKey, kieApiKey, byteplusApiKey, replicateEnabled, kieEnabled } = useProviderApiKeys();
   const [isLoadingCarouselImage, setIsLoadingCarouselImage] = useState(false);
   const [externalModels, setExternalModels] = useState<ProviderModel[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
@@ -105,8 +105,14 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
     if (kieEnabled && kieApiKey) {
       providers.push({ id: "kie", name: "Kie.ai" });
     }
+    // Add BytePlus if a key is configured (Seedream image). The server-side
+    // capability filter restricts this to image models, so Seedance video
+    // models don't surface in the image picker.
+    if (byteplusApiKey) {
+      providers.push({ id: "byteplus", name: "BytePlus" });
+    }
     return providers;
-  }, [replicateEnabled, replicateApiKey, kieEnabled, kieApiKey]);
+  }, [replicateEnabled, replicateApiKey, kieEnabled, kieApiKey, byteplusApiKey]);
 
   // Migrate legacy data: derive selectedModel from model field if missing
   useEffect(() => {
@@ -143,6 +149,9 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
       if (kieApiKey) {
         headers["X-Kie-Key"] = kieApiKey;
       }
+      if (byteplusApiKey) {
+        headers["X-BytePlus-API-Key"] = byteplusApiKey;
+      }
       const response = await deduplicatedFetch(`/api/models?provider=${currentProvider}&capabilities=${capabilities}`, { headers });
       if (response.ok) {
         const data = await response.json();
@@ -165,7 +174,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
     } finally {
       setIsLoadingModels(false);
     }
-  }, [currentProvider, replicateApiKey, falApiKey, kieApiKey]);
+  }, [currentProvider, replicateApiKey, falApiKey, kieApiKey, byteplusApiKey]);
 
   useEffect(() => {
     fetchModels();

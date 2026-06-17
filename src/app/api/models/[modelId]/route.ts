@@ -1145,7 +1145,7 @@ function getKieSchema(modelId: string): ExtractedSchema {
  */
 /**
  * Static parameter schema for OpenAI image models (no schema-discovery API).
- * Params mirror what the @zerogen/providers OpenAI adapter consumes.
+ * Params mirror what the @zerospacestudios/providers OpenAI adapter consumes.
  */
 function getOpenAISchema(modelId: string): ExtractedSchema {
   const promptInput: ModelInput = { name: "prompt", type: "text", required: true, label: "Prompt" };
@@ -1176,11 +1176,44 @@ function getOpenAISchema(modelId: string): ExtractedSchema {
 }
 
 /**
- * Static parameter schema for BytePlus Seedance video models.
- * Params mirror what the @zerogen/providers BytePlus adapter consumes; unknown
- * params (resolution, seed) flow through the adapter's `extra` escape hatch.
+ * Static parameter schema for BytePlus models. BytePlus is dual-capability:
+ * Seedream (image) and Seedance (video). The binding routes by the "seedream"
+ * substring in the model id, so we branch the schema the same way.
+ *
+ * Params mirror what the @zerospacestudios/providers BytePlus adapter consumes;
+ * unknown params (image: seed / video: resolution, seed) flow through the
+ * adapter's `extra` escape hatch.
  */
 function getBytePlusSchema(modelId: string): ExtractedSchema {
+  // Seedream image (text-to-image / image-to-image). `size` is a free-form WxH
+  // string (byteplus-js: e.g. "2048x2048"); `seed` flows through the adapter's
+  // `extra` escape hatch. No `output_format` — Seedream ignores it and the
+  // adapter labels the returned bytes by their actual content. No `n`/batch:
+  // the generate route returns only outputs[0] and the image node records a
+  // single image, so n>1 would just burn credits — omit until multi-output is
+  // surfaced in the UI/history.
+  if (modelId.toLowerCase().includes("seedream")) {
+    return {
+      parameters: [
+        {
+          name: "size",
+          type: "string",
+          description: "Output size (width x height)",
+          enum: ["2048x2048", "2304x1728", "1728x2304", "2560x1440", "1440x2560"],
+          default: "2048x2048",
+        },
+        { name: "seed", type: "integer", description: "Random seed (optional)", minimum: 0 },
+      ],
+      inputs: [
+        // Prompt is required: the image-node executor (executeNanoBanana) rejects an
+        // empty prompt before dispatch, so an image-only invocation can't reach the
+        // provider. image_urls stays optional (text-to-image needs no reference).
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "image_urls", type: "image", required: false, label: "Reference image", isArray: true },
+      ],
+    };
+  }
+
   // Duration ranges differ per Seedance model (BytePlus ModelArk docs + verified
   // generations); the provider still validates server-side. Seedance 1.0 Pro has a
   // higher lower bound than the 1.5 Pro / Dreamina 2.0 tier (4-12s).

@@ -78,6 +78,40 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+### Registry Authentication (required to install)
+
+`npm install` pulls one **private** dependency — `@zerospacestudios/providers`
+(the AI provider binding) — from GitHub Packages, so it needs a `read:packages`
+token exposed as `NODE_AUTH_TOKEN`. The repo's committed `.npmrc` reads it from
+the environment — **never commit a real token**. That project-level entry takes
+precedence over any `~/.npmrc`, so `NODE_AUTH_TOKEN` must be set even if you
+already have a user-level GitHub Packages token.
+
+```bash
+# local dev (the gh login already carries read:packages):
+export NODE_AUTH_TOKEN="$(gh auth token)"
+# first time only, if gh lacks the scope:
+#   gh auth refresh -h github.com -s read:packages
+npm install
+```
+
+**CI / Vercel:** set `NODE_AUTH_TOKEN` to a `read:packages` token as a build-time
+environment variable.
+
+- **GitHub Actions:** prefer the built-in token — no PAT to manage. See the
+  ready-to-drop [`ci.yml.example`](.github/workflows/ci.yml.example): set
+  `permissions: { packages: read }` and `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
+- **Vercel (or other hosts):** add a fine-grained PAT scoped to the org's
+  packages as the `NODE_AUTH_TOKEN` env var (all environments). Without it,
+  `npm install` — and therefore the build — fails with a 401 from
+  `npm.pkg.github.com`.
+
+> **Verify before installing:** run `npm run check:auth` to confirm
+> `NODE_AUTH_TOKEN` is set (it prints the fix if not). It's a standalone command
+> rather than a `preinstall` hook because npm resolves and fetches dependencies
+> *before* lifecycle scripts run — a hook can't fail before the registry request
+> it would guard.
+
 ### Environment Variables
 
 Create a `.env.local` file in the root directory:

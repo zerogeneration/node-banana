@@ -3,6 +3,7 @@
   "version": "1.6.0",
   "private": true,
   "scripts": {
+    "check:auth": "node scripts/check-registry-auth.mjs",
     "dev": "node server.js",
     "build": "next build",
     "start": "next start",
@@ -19,7 +20,7 @@
     "@react-three/fiber": "^9.5.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@xyflow/react": "^12.9.3",
-    "@zerogen/providers": "file:vendor/zerogen-providers-0.1.0.tgz",
+    "@zerospacestudios/providers": "^0.2.0",
     "ai": "^6.0.49",
     "autoprefixer": "^10.4.22",
     "jszip": "^3.10.1",
