@@ -84,6 +84,13 @@ export async function fromEngineResult(job: EngineJob, opts: FromEngineResultOpt
     throw new Error(`Engine job ${job.id} (${job.kind}) succeeded without a result payload.`);
   }
   if (job.kind === "text") {
+    // CUTOVER PREREQUISITE: node-banana's real GenerationOutput union
+    // (@/lib/providers/types) is image|video|3d|audio — it has no "text" — and
+    // `buildMediaResponse` in the generate route falls unknown types through to the
+    // image response. So a text binding MUST NOT be wired into /api/generate until
+    // that union and `buildMediaResponse` gain a text path, or generated text gets
+    // serialized as an image. node-banana's text generation runs through /api/llm
+    // today, so this path is exercised only by a future text cutover. See README.
     return [{ type: "text", data: result.text ?? "" }];
   }
   return Promise.all(result.assets.map((asset) => assetToNbOutput(asset, opts)));

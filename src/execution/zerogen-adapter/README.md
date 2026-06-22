@@ -54,6 +54,20 @@ These are **engine-side** (playground/appliance work), not node-banana work:
    `text` body carries `extra`. Provider-specific tuning params (e.g. a video
    `seed`) on a media request are dropped. Surface them in `to-engine-request.ts`
    when the engine adds the fields.
+3. **`/api/generate/image` exposes only `prompt`/`size`/`quality`/`outputFormat`** —
+   the canonical `background` and `n` image fields have no engine field and are
+   dropped too (e.g. an OpenAI `background: "transparent"` request falls back to the
+   provider default). Same pending engine change as (1)/(2).
+
+### Output-contract prerequisite (text)
+
+The text executors return `{ type: "text" }`, but node-banana's real
+`GenerationOutput` union (`@/lib/providers/types`) is `image | video | 3d | audio`
+and the generate route's `buildMediaResponse` falls unknown types through to the
+**image** response. A text binding therefore **cannot** be wired into
+`/api/generate` until that union and `buildMediaResponse` gain a text path — else
+generated text is serialized as an image. (Text generation runs through `/api/llm`
+today, so this only matters for a future text cutover.)
 
 ## Remaining live-cutover steps (plan §4.4–§4.6)
 
@@ -66,7 +80,9 @@ These are **engine-side** (playground/appliance work), not node-banana work:
 3. **Flip the bindings.** Replace the re-exports in
    `src/app/api/generate/providers/{byteplus,openai,elevenlabs}.ts` with
    `createNodeBananaBindings(ctx).generateWith*` (drop-in `(requestId, apiKey,
-   input)` signature — `apiKey` is ignored; the engine holds keys).
+   input)` signature — `apiKey` is ignored; the engine holds keys). For any **text**
+   binding, first extend the `GenerationOutput` union + `buildMediaResponse` with a
+   text path (see "Output-contract prerequisite" above).
 4. **Verify end-to-end** (dev: node-banana → local engine; cloud: web app →
    engine), then remove the `@zerospacestudios/providers` dependency.
 5. **Swap the vendored `contract.ts`** for the published `@zerogen` contract

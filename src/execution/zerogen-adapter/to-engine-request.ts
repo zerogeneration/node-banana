@@ -16,6 +16,11 @@
  *    on a media request are dropped here. This is a known gap pending an engine
  *    change (plan §4.1 "serve every capability"); when the engine adds these
  *    fields, surface them below.
+ *  - **`/api/generate/image` exposes only `prompt`/`size`/`quality`/`outputFormat`.**
+ *    The canonical `background` and `n` fields of an {@link ImageRequest} have no
+ *    engine field, so they are dropped too (e.g. an OpenAI `background:"transparent"`
+ *    request falls back to the provider default). Same pending engine change —
+ *    forward them from {@link imageRequest} once `/image` accepts them.
  */
 import type {
   EngineImageBody,
@@ -67,6 +72,9 @@ export function imageRequest(req: ImageRequest, ctx: EngineCallContext): EngineR
         "engine image contract to add image support.",
     );
   }
+  // NOTE: req.background and req.n have no field on the engine image contract
+  // (it exposes only size/quality/outputFormat), and /image has no `extra` escape
+  // hatch — so those canonical fields are dropped. See the coverage-gap note above.
   const body: EngineImageBody = {
     ...envelope(ctx),
     provider: ctx.provider,
