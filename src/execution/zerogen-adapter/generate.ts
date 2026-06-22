@@ -123,6 +123,14 @@ export async function executeWithByteplus(
   ctx: ZerogenExecutorContext,
 ): Promise<GenerationOutput> {
   try {
+    // Fail closed on a declared capability outside image/video (e.g. a `text-to-audio`
+    // model id reaching the byteplus branch) rather than letting byteplusFallback default
+    // it to video and return the wrong modality.
+    if (unsupportedCapability(input.model, ["image", "video"])) {
+      throw new EngineError(
+        "This BytePlus binding supports only image and video generation; the declared capability isn't wired up.",
+      );
+    }
     const capability = pickCapability(input.model, ["image", "video"], byteplusFallback(input.model));
     if (capability === "image") {
       return await run(imageRequest(toImageRequest(input), callContext("byteplus", ctx)), ctx);
@@ -174,6 +182,14 @@ export async function executeWithElevenLabs(
   ctx: ZerogenExecutorContext,
 ): Promise<GenerationOutput> {
   try {
+    // Fail closed on a declared non-audio capability (e.g. an image/video/3D tag)
+    // rather than letting the model-id inference fall through to speech and submit an
+    // unsupported model to /api/generate/speech.
+    if (unsupportedCapability(input.model, ["speech", "music", "soundEffect"])) {
+      throw new EngineError(
+        "This ElevenLabs binding supports only audio generation (speech / music / sound effect); the declared capability isn't wired up.",
+      );
+    }
     const capability = elevenLabsCapability(input);
     if (capability === "music") {
       return await run(musicRequest(toMusicRequest(input), callContext("elevenlabs", ctx)), ctx);

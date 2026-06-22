@@ -42,6 +42,37 @@ describe("input mappers", () => {
     expect(req.extra).toBeUndefined();
   });
 
+  it("collects node-banana's schema-named image handles (first_frame, start_image, img, photo)", () => {
+    const req = toImageRequest({
+      model: { id: "m" },
+      prompt: "x",
+      parameters: { start_image: "https://a/1.png", img: "https://a/2.png", photo: "https://a/3.png" },
+    });
+    expect(req.images).toEqual(["https://a/1.png", "https://a/2.png", "https://a/3.png"]);
+    expect(req.extra).toBeUndefined();
+  });
+
+  it("collects schema-named frame/image handles for image-to-video (first_frame, tail_image_url)", () => {
+    const req = toVideoRequest({
+      model: { id: "seedance" },
+      prompt: "animate",
+      dynamicInputs: { first_frame: "data:image/png;base64,AAA", tail_image_url: "https://cdn/end.png" },
+    });
+    expect(req.images).toEqual(["data:image/png;base64,AAA", "https://cdn/end.png"]);
+    expect(req.extra).toBeUndefined();
+  });
+
+  it("does not sweep non-image params that merely contain 'image' (image_strength) into images", () => {
+    const req = toVideoRequest({
+      model: { id: "m" },
+      prompt: "x",
+      parameters: { image_strength: 0.6, image_guidance: "high", first_frame: "https://a/f.png" },
+    });
+    expect(req.images).toEqual(["https://a/f.png"]);
+    // The numeric/enum *image* tuning params are not image refs, so they stay in extra.
+    expect(req.extra).toEqual({ image_strength: 0.6, image_guidance: "high" });
+  });
+
   it("maps video aliases (aspect_ratio, duration, generate_audio)", () => {
     const req = toVideoRequest({
       model: { id: "seedance" },

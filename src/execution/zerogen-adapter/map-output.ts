@@ -13,6 +13,16 @@
  * arbitrary provider CDNs and needed SSRF hardening), the asset URL here is the
  * **engine's own** base URL — trusted, injected by the host — so a plain fetch is
  * appropriate.
+ *
+ * ## Cloud cutover prerequisite (authenticated media)
+ *
+ * The url-only media path returns a raw engine URL the **browser** fetches later.
+ * In dev (unauthenticated engine) that's fine, but on the cloud path (the client is
+ * configured with an `authToken`) the browser won't carry the `Authorization`
+ * header that {@link AssetFetcher} uses for inlined images, so a protected
+ * video/audio/3d asset would fail to load. Before the cloud cutover the host must
+ * make these URLs browser-reachable — serve assets via **signed URLs**, or **proxy**
+ * them through the app — rather than returning the bare engine URL. See README.
  */
 import type { EngineAsset, EngineJob, NbOutput, NbOutputType } from "./contract";
 

@@ -170,6 +170,17 @@ describe("executeWithByteplus", () => {
     expect(out.outputs?.[0]?.type).toBe("image");
   });
 
+  it("fails closed on a declared capability outside image/video (audio) instead of defaulting to video", async () => {
+    const client = fakeClient();
+    const out = await executeWithByteplus(
+      mkInput({ id: "seedance", provider: "byteplus", capabilities: "text-to-audio" }, { prompt: "x" }),
+      ctxWith(client),
+    );
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/only image and video/i);
+    expect(client.generate).not.toHaveBeenCalled();
+  });
+
   it("fails closed on Seedream image-to-image (engine /image has no images field)", async () => {
     const client = fakeClient();
     const out = await executeWithByteplus(
@@ -214,6 +225,17 @@ describe("executeWithElevenLabs", () => {
     );
     expect(client.calls[0]!.endpoint).toBe("/api/generate/speech");
     expect(client.calls[0]!.body).toMatchObject({ text: "hello", provider: "elevenlabs" });
+  });
+
+  it("fails closed on a declared non-audio capability (video) instead of falling through to speech", async () => {
+    const client = fakeClient();
+    const out = await executeWithElevenLabs(
+      mkInput({ id: "eleven_multilingual_v2", provider: "elevenlabs", capabilities: "text-to-video" }, { prompt: "x" }),
+      ctxWith(client),
+    );
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/only audio/i);
+    expect(client.generate).not.toHaveBeenCalled();
   });
 });
 

@@ -21,6 +21,11 @@
  *    engine field, so they are dropped too (e.g. an OpenAI `background:"transparent"`
  *    request falls back to the provider default). Same pending engine change —
  *    forward them from {@link imageRequest} once `/image` accepts them.
+ *  - **`/api/generate/video` carries no source-audio input** (only `images`). An
+ *    `audio-to-video` model that depends on a connected `audio`/`audio_url` handle
+ *    can't be expressed — the audio is dropped. Routes here via the `audio-to-video`
+ *    capability alias; forward the audio from {@link videoRequest} once the engine
+ *    video contract accepts an audio input.
  */
 import type {
   EngineImageBody,

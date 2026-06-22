@@ -58,6 +58,10 @@ These are **engine-side** (playground/appliance work), not node-banana work:
    the canonical `background` and `n` image fields have no engine field and are
    dropped too (e.g. an OpenAI `background: "transparent"` request falls back to the
    provider default). Same pending engine change as (1)/(2).
+4. **`/api/generate/video` carries no source-audio input** — an `audio-to-video`
+   model that needs a connected `audio`/`audio_url` handle can't be expressed (the
+   video body has only `images`), so the source audio is dropped. Forward it from
+   `videoRequest` once the engine video contract accepts audio.
 
 ### Output-contract prerequisite (text)
 
@@ -83,6 +87,15 @@ today, so this only matters for a future text cutover.)
    input)` signature — `apiKey` is ignored; the engine holds keys). For any **text**
    binding, first extend the `GenerationOutput` union + `buildMediaResponse` with a
    text path (see "Output-contract prerequisite" above).
+   - **Remove the route's BYOK 401 gates.** The `byteplus`/`openai`/`elevenlabs`
+     branches in `src/app/api/generate/route.ts` return **401 unless a provider API
+     key is present** before they call `generateWith*`. Since the engine holds the
+     keys, those gates must be removed/rewritten as part of the flip, or
+     engine/cloud-auth-only users are blocked from the engine path.
+   - **Cloud media auth.** On the cloud path (client `authToken` set), url-only
+     video/audio/3d outputs are bare engine URLs the browser fetches without the
+     bearer. Serve them as **signed URLs** or **proxy** them through the app before
+     the cutover, or protected media fails to load after a successful job.
 4. **Verify end-to-end** (dev: node-banana → local engine; cloud: web app →
    engine), then remove the `@zerospacestudios/providers` dependency.
 5. **Swap the vendored `contract.ts`** for the published `@zerogen` contract

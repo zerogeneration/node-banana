@@ -171,7 +171,14 @@ function mergedParams(input: NbInput): Record<string, unknown> {
   return { ...(input.parameters ?? {}), ...(input.dynamicInputs ?? {}) };
 }
 
-/** Param keys that carry input images, so they route to `images`, not `extra`. */
+/**
+ * Param keys that carry input images, so they route to `images`, not `extra`.
+ * Mirrors node-banana's own image input patterns (`INPUT_PATTERNS.image` in
+ * `src/app/api/generate/schemaUtils.ts`) plus camelCase / frame variants, so a
+ * handle wired under any of these schema names (e.g. a Seedance `first_frame`) is
+ * collected instead of left in `extra` — which the engine media bodies drop,
+ * silently degrading image-to-video to text-to-video.
+ */
 const IMAGE_INPUT_KEYS = [
   "image",
   "images",
@@ -179,27 +186,76 @@ const IMAGE_INPUT_KEYS = [
   "image_urls",
   "referenceImages",
   "reference_images",
+  "reference_image",
+  "first_frame",
+  "last_frame",
+  "start_image",
+  "init_image",
+  "input_image",
+  "image_input",
+  "source_image",
+  "tail_image_url",
+  "img",
+  "photo",
 ];
 
-/** Gather input images from `input.images` plus any image-bearing params/inputs. */
-function collectImages(input: NbInput): string[] | undefined {
+/**
+ * A schema-named image/frame handle NOT in {@link IMAGE_INPUT_KEYS}. node-banana
+ * derives handle names from each model's OpenAPI schema, so an image input can
+ * arrive under an unanticipated key. Match the generate route's own detection
+ * (the key contains "image" or "frame"); to avoid sweeping in numeric tuning
+ * params like `image_strength`, only image-like *values* are collected from these
+ * keys (see {@link looksLikeImageRef}).
+ */
+function isSchemaImageKey(key: string): boolean {
+  if (IMAGE_INPUT_KEYS.includes(key)) return false;
+  const k = key.toLowerCase();
+  return k.includes("image") || k.includes("frame");
+}
+
+/** True for a string that looks like an image source (data URL, http(s), asset:, blob:). */
+function looksLikeImageRef(v: unknown): v is string {
+  return typeof v === "string" && /^\s*(data:|https?:|asset:|blob:)/i.test(v);
+}
+
+/**
+ * Gather input images from `input.images`, the canonical {@link IMAGE_INPUT_KEYS},
+ * and any schema-named image/frame handle. Returns the collected images plus the
+ * schema-named keys consumed, so callers keep those out of `extra`.
+ *
+ * Skips blank/whitespace entries: an unwired node-banana image input arrives as ""
+ * (or an array with blanks), which would otherwise become an empty image URL on the
+ * request or a downloadToBuffer("") downstream and fail an otherwise valid request.
+ */
+function collectImages(input: NbInput): { images?: string[]; schemaKeys: string[] } {
   const out: string[] = [];
-  // Skip blank/whitespace entries: an unwired node-banana image input arrives as "" (or an
-  // array containing blanks), which would otherwise become an empty image URL on the request
-  // (OpenAI/Anthropic) or a downloadToBuffer("") (Gemini) and fail an otherwise valid request.
-  const push = (v: unknown): void => {
-    if (typeof v === "string" && v.trim() !== "") out.push(v);
+  const schemaKeys: string[] = [];
+  const push = (v: unknown): boolean => {
+    if (typeof v === "string" && v.trim() !== "") {
+      out.push(v);
+      return true;
+    }
+    return false;
   };
   if (input.images) for (const src of input.images) push(src);
   const bag = mergedParams(input);
-  for (const key of IMAGE_INPUT_KEYS) {
-    const v = bag[key];
-    if (Array.isArray(v)) for (const item of v) push(item);
-    else push(v);
+  for (const [key, value] of Object.entries(bag)) {
+    if (IMAGE_INPUT_KEYS.includes(key)) {
+      if (Array.isArray(value)) for (const item of value) push(item);
+      else push(value);
+    } else if (isSchemaImageKey(key)) {
+      let consumed = false;
+      if (Array.isArray(value)) {
+        for (const item of value) if (looksLikeImageRef(item) && push(item)) consumed = true;
+      } else if (looksLikeImageRef(value)) {
+        consumed = push(value);
+      }
+      if (consumed) schemaKeys.push(key);
+    }
   }
   const seen = new Set<string>();
   const deduped = out.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
-  return deduped.length > 0 ? deduped : undefined;
+  return { ...(deduped.length > 0 ? { images: deduped } : {}), schemaKeys };
 }
 
 /** Everything in `params` except the consumed `keys`, for the `extra` escape hatch. */
@@ -251,8 +307,8 @@ function imageOutputFormat(params: Record<string, unknown>): ImageRequest["outpu
 
 export function toImageRequest(input: NbInput): ImageRequest {
   const params = mergedParams(input);
-  const images = collectImages(input);
-  const rest = leftover(params, IMAGE_KEYS);
+  const { images, schemaKeys } = collectImages(input);
+  const rest = leftover(params, [...IMAGE_KEYS, ...schemaKeys]);
   const format = imageOutputFormat(params);
   return {
     model: modelId(input, params),
@@ -297,8 +353,8 @@ const VIDEO_KEYS = [
 
 export function toVideoRequest(input: NbInput): VideoRequest {
   const params = mergedParams(input);
-  const images = collectImages(input);
-  const rest = leftover(params, VIDEO_KEYS);
+  const { images, schemaKeys } = collectImages(input);
+  const rest = leftover(params, [...VIDEO_KEYS, ...schemaKeys]);
   const prompt = resolvePrompt(input);
   const ratio = strOpt(params.ratio) ?? strOpt(params.aspect_ratio) ?? strOpt(params.aspectRatio);
   const duration =
@@ -636,8 +692,8 @@ function extractMessages(p: TextParams): { messages?: TextMessage[]; system?: st
  */
 export function toTextRequest(input: NbInput): TextRequest {
   const p = new TextParams(input);
-  const images = collectImages(input);
-  p.consume(...IMAGE_INPUT_KEYS);
+  const { images, schemaKeys } = collectImages(input);
+  p.consume(...IMAGE_INPUT_KEYS, ...schemaKeys);
 
   const model = strOpt(p.at("model")) ?? strOpt(p.at("modelId")) ?? input.model.id;
   p.consume("model", "modelId");
