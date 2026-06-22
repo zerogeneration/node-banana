@@ -59,9 +59,10 @@ These are **engine-side** (playground/appliance work), not node-banana work:
    dropped too (e.g. an OpenAI `background: "transparent"` request falls back to the
    provider default). Same pending engine change as (1)/(2).
 4. **`/api/generate/video` carries no source-audio input** — an `audio-to-video`
-   model that needs a connected `audio`/`audio_url` handle can't be expressed (the
-   video body has only `images`), so the source audio is dropped. Forward it from
-   `videoRequest` once the engine video contract accepts audio.
+   model can't deliver the audio that defines it (the video body has only `images`),
+   so the executor **fails closed** rather than running video without the audio.
+   Forward the audio from `videoRequest` and drop the guard once the engine video
+   contract accepts audio.
 
 ### Output-contract prerequisite (text)
 

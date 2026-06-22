@@ -22,10 +22,10 @@
  *    request falls back to the provider default). Same pending engine change —
  *    forward them from {@link imageRequest} once `/image` accepts them.
  *  - **`/api/generate/video` carries no source-audio input** (only `images`). An
- *    `audio-to-video` model that depends on a connected `audio`/`audio_url` handle
- *    can't be expressed — the audio is dropped. Routes here via the `audio-to-video`
- *    capability alias; forward the audio from {@link videoRequest} once the engine
- *    video contract accepts an audio input.
+ *    `audio-to-video` model can't deliver the audio that defines it, so the executor
+ *    **fails closed** (`declaresAudioToVideo` → reject) rather than running video
+ *    without the audio. Forward the audio from {@link videoRequest} and drop the
+ *    guard once the engine video contract accepts an audio input.
  */
 import type {
   EngineImageBody,

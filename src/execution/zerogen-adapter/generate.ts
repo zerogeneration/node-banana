@@ -23,10 +23,10 @@ import type { EngineClient } from "./engine-client";
 import { EngineError } from "./engine-client";
 import { fromEngineResult } from "./map-output";
 import {
+  declaresAudioToVideo,
   declaresThreeD,
   normalizeCapabilities,
   pickCapability,
-  toFalImageRequest,
   toImageRequest,
   toMusicRequest,
   toSoundEffectRequest,
@@ -64,6 +64,22 @@ function fail(provider: string, error: unknown): GenerationOutput {
 
 function callContext(provider: string, ctx: ZerogenExecutorContext): EngineCallContext {
   return { provider, target: ctx.target, ...(ctx.metadata ? { metadata: ctx.metadata } : {}) };
+}
+
+/**
+ * Fail closed before routing to the video path when the model declares
+ * `audio-to-video`: the engine `/api/generate/video` body has no source-audio input,
+ * so the audio that defines the request would be silently dropped. Reject until the
+ * engine video contract can carry audio (see `to-engine-request.ts`).
+ */
+function assertVideoExpressible(input: GenerationInput): void {
+  if (declaresAudioToVideo(input.model)) {
+    throw new EngineError(
+      "audio-to-video isn't supported by this binding yet: the engine /api/generate/video contract has no " +
+        "source-audio input field, so the audio that defines the request would be dropped. Wait for the engine " +
+        "video contract to accept audio.",
+    );
+  }
 }
 
 /** Submit one engine request, await its terminal job, and map the result to node-banana outputs. */
@@ -135,6 +151,7 @@ export async function executeWithByteplus(
     if (capability === "image") {
       return await run(imageRequest(toImageRequest(input), callContext("byteplus", ctx)), ctx);
     }
+    assertVideoExpressible(input);
     return await run(videoRequest(toVideoRequest(input), callContext("byteplus", ctx)), ctx);
   } catch (error) {
     return fail("byteplus", error);
@@ -151,11 +168,21 @@ export async function executeWithFal(
         "3D generation isn't supported by this binding (no 3D port). Use an image or video model.",
       );
     }
+    // fal serves image + video; fail closed on a declared audio/text/other capability
+    // instead of letting the "image" fallback post it to /api/generate/image.
+    if (unsupportedCapability(input.model, ["image", "video"])) {
+      throw new EngineError(
+        "This fal binding supports only image and video generation; the declared capability isn't wired up.",
+      );
+    }
     const capability = pickCapability(input.model, ["image", "video"], "image");
     if (capability === "video") {
+      assertVideoExpressible(input);
       return await run(videoRequest(toVideoRequest(input), callContext("fal", ctx)), ctx);
     }
-    return await run(imageRequest(toFalImageRequest(input), callContext("fal", ctx)), ctx);
+    // Plain toImageRequest (not the in-process fal variant): the engine image body
+    // accepts the canonical `outputFormat`, and the engine owns fal's field naming.
+    return await run(imageRequest(toImageRequest(input), callContext("fal", ctx)), ctx);
   } catch (error) {
     return fail("fal", error);
   }

@@ -100,6 +100,19 @@ export function declaresThreeD(model: CapabilityModel): boolean {
 }
 
 /**
+ * True when the model declares `audio-to-video` (audio-conditioned video). The
+ * capability alias routes it to the video path — a *supported* capability, so
+ * {@link unsupportedCapability} does NOT catch it — but the engine
+ * `/api/generate/video` body has no source-audio input field, so the audio that
+ * defines the request would be silently dropped. Callers fail closed instead.
+ */
+export function declaresAudioToVideo(model: CapabilityModel): boolean {
+  const raw = model.capabilities;
+  const tags = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return tags.some((tag) => tag.toLowerCase().trim().replace(/_/g, "-") === "audio-to-video");
+}
+
+/**
  * True when a model declares a capability that `supported` doesn't cover (or any 3D
  * tag). A model with no declared capability is allowed (back-compat fallback). Used
  * by single-/dual-capability bindings to fail closed on unsupported modalities
@@ -323,18 +336,12 @@ export function toImageRequest(input: NbInput): ImageRequest {
   };
 }
 
-/**
- * fal image variant of {@link toImageRequest}. `FalImageGenerator` forwards
- * provider-specific fields from `extra` (plus prompt/images/image_size/num_images)
- * but does NOT read the canonical `outputFormat`, so we relocate it into
- * `extra.output_format` (fal's own field name) to avoid silently dropping it.
- */
-export function toFalImageRequest(input: NbInput): ImageRequest {
-  const request = toImageRequest(input);
-  if (!request.outputFormat) return request;
-  const { outputFormat, extra, ...rest } = request;
-  return { ...rest, extra: { ...(extra ?? {}), output_format: outputFormat } };
-}
+// NOTE: the in-process `toFalImageRequest` (which relocated `outputFormat` into
+// `extra.output_format` for `FalImageGenerator`) is intentionally NOT carried over.
+// On the engine path the engine owns fal's field-name translation, and its image body
+// accepts the canonical `outputFormat` — so the fal executor uses {@link toImageRequest}
+// directly, keeping `outputFormat` rather than burying it in `extra` (which the engine
+// image body drops).
 
 const VIDEO_KEYS = [
   "prompt",

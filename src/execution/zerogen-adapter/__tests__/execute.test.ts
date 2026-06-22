@@ -181,6 +181,17 @@ describe("executeWithByteplus", () => {
     expect(client.generate).not.toHaveBeenCalled();
   });
 
+  it("fails closed on audio-to-video (engine /video has no source-audio input)", async () => {
+    const client = fakeClient();
+    const out = await executeWithByteplus(
+      mkInput({ id: "seedance", provider: "byteplus", capabilities: "audio-to-video" }, { prompt: "x" }),
+      ctxWith(client),
+    );
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/audio-to-video/i);
+    expect(client.generate).not.toHaveBeenCalled();
+  });
+
   it("fails closed on Seedream image-to-image (engine /image has no images field)", async () => {
     const client = fakeClient();
     const out = await executeWithByteplus(
@@ -203,6 +214,41 @@ describe("executeWithFal", () => {
     expect(out.success).toBe(false);
     expect(out.error).toMatch(/3D/i);
     expect(client.generate).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on a declared audio capability instead of falling back to image", async () => {
+    const client = fakeClient();
+    const out = await executeWithFal(
+      mkInput({ id: "fal-ai/some-tts", provider: "fal", capabilities: "text-to-audio" }, { prompt: "x" }),
+      ctxWith(client),
+    );
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/only image and video/i);
+    expect(client.generate).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on audio-to-video (engine /video has no source-audio input)", async () => {
+    const client = fakeClient();
+    const out = await executeWithFal(
+      mkInput({ id: "fal-ai/some-a2v", provider: "fal", capabilities: "audio-to-video" }, {
+        prompt: "x",
+        parameters: { audio_url: "https://a/clip.mp3" },
+      }),
+      ctxWith(client),
+    );
+    expect(out.success).toBe(false);
+    expect(out.error).toMatch(/audio-to-video/i);
+    expect(client.generate).not.toHaveBeenCalled();
+  });
+
+  it("forwards the canonical image outputFormat to the engine body (not buried in extra)", async () => {
+    const client = fakeClient();
+    await executeWithFal(
+      mkInput({ id: "fal-ai/flux", provider: "fal" }, { prompt: "x", parameters: { output_format: "jpeg" } }),
+      ctxWith(client),
+    );
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
+    expect(client.calls[0]!.body).toMatchObject({ outputFormat: "jpeg" });
   });
 });
 
