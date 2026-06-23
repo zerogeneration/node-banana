@@ -1,10 +1,11 @@
 /**
  * ElevenLabs audio generation provider (speech / music / sound-effect).
  *
- * Thin binding over `@zerospacestudios/providers/node-banana`: the input/output mapping and
- * the audio sub-capability routing (speech vs music vs sound-effect, inferred from
- * the model id) are implemented and unit-tested upstream in that package. We only
- * re-export the dispatch entry point so it matches node-banana's per-provider
- * layout (see route.ts).
+ * Engine-backed (local-dev cutover): the input/output mapping and audio
+ * sub-capability routing run through the fork's execution-adapter against the
+ * zerogen engine over HTTP — see `./engine`. Provider keys live server-side in
+ * the engine.
  */
-export { generateWithElevenLabs } from "@zerospacestudios/providers/node-banana";
+import { engineBinding } from "./engine";
+
+export const generateWithElevenLabs = engineBinding("elevenlabs");

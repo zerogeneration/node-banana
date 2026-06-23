@@ -3,10 +3,11 @@ import { NextRequest } from "next/server";
 
 /**
  * Route-wiring tests for the BytePlus / OpenAI / ElevenLabs dispatch branches in
- * /api/generate. The actual input/output mapping lives in (and is unit-tested by)
- * @zerospacestudios/providers/node-banana, so here we mock the per-provider modules and
- * assert that route.ts: reads the BYOK header/env, builds the GenerationInput,
- * dispatches to the right binding, and serializes the output with buildMediaResponse.
+ * /api/generate. The input/output mapping lives in (and is unit-tested by) the fork's
+ * execution-adapter (`@/execution/zerogen-adapter`, engine-backed), so here we mock the
+ * per-provider modules and assert that route.ts builds the GenerationInput, dispatches
+ * to the right binding, and serializes the output with buildMediaResponse. BYOK is gone
+ * (the engine holds keys), so dispatch proceeds without a provider key.
  */
 
 const { mockByteplus, mockOpenai, mockElevenlabs } = vi.hoisted(() => ({
@@ -100,7 +101,11 @@ describe("/api/generate dispatch for byteplus/openai/elevenlabs", () => {
       expect(mockByteplus.mock.calls[0][1]).toBe("ark-key");
     });
 
-    it("returns 401 when no key is configured", async () => {
+    it("proceeds without a provider key (engine holds keys)", async () => {
+      mockByteplus.mockResolvedValueOnce({
+        success: true,
+        outputs: [{ type: "video", data: "", url: "https://cdn.example.com/v.mp4" }],
+      });
       const request = createMockPostRequest({
         prompt: "a dog",
         mediaType: "video",
@@ -109,8 +114,8 @@ describe("/api/generate dispatch for byteplus/openai/elevenlabs", () => {
 
       const response = await POST(request);
 
-      expect(response.status).toBe(401);
-      expect(mockByteplus).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(mockByteplus).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -139,7 +144,11 @@ describe("/api/generate dispatch for byteplus/openai/elevenlabs", () => {
       expect(data.image).toBe("data:image/png;base64,AAAA");
     });
 
-    it("returns 401 when no key is configured", async () => {
+    it("proceeds without a provider key (engine holds keys)", async () => {
+      mockOpenai.mockResolvedValueOnce({
+        success: true,
+        outputs: [{ type: "image", data: "data:image/png;base64,AAAA" }],
+      });
       const request = createMockPostRequest({
         prompt: "a fox",
         selectedModel: { provider: "openai", modelId: "gpt-image-1", displayName: "GPT Image 1" },
@@ -147,8 +156,8 @@ describe("/api/generate dispatch for byteplus/openai/elevenlabs", () => {
 
       const response = await POST(request);
 
-      expect(response.status).toBe(401);
-      expect(mockOpenai).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(mockOpenai).toHaveBeenCalledTimes(1);
     });
 
     it("propagates a provider failure as a 500", async () => {
@@ -192,7 +201,11 @@ describe("/api/generate dispatch for byteplus/openai/elevenlabs", () => {
       expect(data.audio).toBe("data:audio/mpeg;base64,BBBB");
     });
 
-    it("returns 401 when no key is configured", async () => {
+    it("proceeds without a provider key (engine holds keys)", async () => {
+      mockElevenlabs.mockResolvedValueOnce({
+        success: true,
+        outputs: [{ type: "audio", data: "data:audio/mpeg;base64,BBBB" }],
+      });
       const request = createMockPostRequest({
         prompt: "hi",
         mediaType: "audio",
@@ -201,8 +214,8 @@ describe("/api/generate dispatch for byteplus/openai/elevenlabs", () => {
 
       const response = await POST(request);
 
-      expect(response.status).toBe(401);
-      expect(mockElevenlabs).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(mockElevenlabs).toHaveBeenCalledTimes(1);
     });
   });
 });

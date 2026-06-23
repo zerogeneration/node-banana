@@ -1,9 +1,10 @@
 /**
- * BytePlus (Seedance) video generation provider.
+ * BytePlus (Seedream image / Seedance video) provider.
  *
- * Thin binding over `@zerospacestudios/providers/node-banana`: the input/output mapping,
- * capability routing, and base64 data-URL encoding are implemented and unit-tested
- * upstream in that package. We only re-export the dispatch entry point so it matches
- * node-banana's per-provider layout (see route.ts).
+ * Engine-backed (local-dev cutover): the input/output mapping and capability
+ * routing run through the fork's execution-adapter against the zerogen engine
+ * over HTTP — see `./engine`. Provider keys live server-side in the engine.
  */
-export { generateWithByteplus } from "@zerospacestudios/providers/node-banana";
+import { engineBinding } from "./engine";
+
+export const generateWithByteplus = engineBinding("byteplus");
