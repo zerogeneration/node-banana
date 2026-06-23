@@ -208,6 +208,10 @@ export interface EngineJobResult {
   /** Generated text for a `text` job; null for media kinds. */
   text: string | null;
   finishReason: string | null;
+  /** Billing-grade usage/cost for the run; null when not reported. */
+  usage?: Record<string, unknown> | null;
+  /** Provider warnings (e.g. unsupported image options the engine surfaced rather than dropped). */
+  warnings?: Array<{ type?: string; message?: string; [key: string]: unknown }>;
 }
 
 /** The async handle the engine wraps around a run (mirrors the engine `Job`). */
@@ -242,9 +246,19 @@ export interface EngineImageBody extends EngineEnvelope {
   prompt: string;
   provider: string;
   model?: string;
+  /** Edit / image-to-image inputs (http(s)/data URLs or `asset:<id>` refs). Edit-capable
+   *  providers (BytePlus Seedream) consume them; text-to-image-only (OpenAI) reject them. */
+  images?: string[];
   size?: string;
   quality?: string;
+  /** Background handling, e.g. "transparent" | "opaque" | "auto" (provider-specific). */
+  background?: string;
+  /** Number of images to generate (provider-specific; engine caps it). */
+  n?: number;
   outputFormat?: "png" | "jpeg" | "webp";
+  /** Provider-specific passthrough. The engine rejects credential, batch-count, and
+   *  image-input keys (use `images` for inputs); other params pass through verbatim. */
+  extra?: Record<string, unknown>;
 }
 
 export interface EngineVideoBody extends EngineEnvelope {

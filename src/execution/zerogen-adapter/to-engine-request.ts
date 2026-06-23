@@ -5,27 +5,22 @@
  *
  * ## Engine coverage gaps (today's contract)
  *
- * The engine's media generate bodies are narrower than the neutral requests:
- *  - **`/api/generate/image` has no `images` field** — it is text-to-image only.
- *    A request carrying reference images (e.g. BytePlus Seedream image-to-image)
- *    **cannot** be expressed, so we fail closed ({@link EngineCoverageError})
- *    rather than silently dropping the references and returning a wrong (txt2img)
- *    result.
- *  - **No `extra` passthrough on image/video/speech/music/soundEffect** — only the
- *    `text` body carries `extra`. Provider-specific tuning params (a `seed`, etc.)
- *    on a media request are dropped here. This is a known gap pending an engine
- *    change (plan §4.1 "serve every capability"); when the engine adds these
- *    fields, surface them below.
- *  - **`/api/generate/image` exposes only `prompt`/`size`/`quality`/`outputFormat`.**
- *    The canonical `background` and `n` fields of an {@link ImageRequest} have no
- *    engine field, so they are dropped too (e.g. an OpenAI `background:"transparent"`
- *    request falls back to the provider default). Same pending engine change —
- *    forward them from {@link imageRequest} once `/image` accepts them.
+ * The `image` and `text` bodies carry the full neutral request (incl. `images` +
+ * `extra`); the remaining media bodies are still narrower:
+ *  - **No `extra` passthrough on video/speech/music/soundEffect** — only `image`
+ *    and `text` carry `extra`. Provider tuning params (a `seed`, etc.) on those
+ *    media requests are dropped here, pending an engine change; surface them below
+ *    when the engine adds the fields.
  *  - **`/api/generate/video` carries no source-audio input** (only `images`). An
  *    `audio-to-video` model can't deliver the audio that defines it, so the executor
  *    **fails closed** (`declaresAudioToVideo` → reject) rather than running video
  *    without the audio. Forward the audio from {@link videoRequest} and drop the
  *    guard once the engine video contract accepts an audio input.
+ *
+ * Image inputs ARE carried now: `imageRequest` forwards `images`/`extra`/`background`/`n`.
+ * The engine enforces per-provider support — it rejects reference images for
+ * text-to-image-only providers (OpenAI) and rejects credential/batch/image-input
+ * keys inside image `extra` — so the adapter forwards rather than second-guessing.
  */
 import type {
   EngineImageBody,
@@ -43,14 +38,6 @@ import type {
   TextRequest,
   VideoRequest,
 } from "./contract";
-
-/** Raised when a neutral request needs a capability the engine contract can't yet express. */
-export class EngineCoverageError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "EngineCoverageError";
-  }
-}
 
 /** Host context folded into every engine request: which provider, which run target, optional metadata. */
 export interface EngineCallContext {
@@ -70,24 +57,22 @@ function envelope(ctx: EngineCallContext): EngineTarget & { metadata?: Record<st
 const endpoint = (kind: EngineRequest["kind"]): string => `/api/generate/${kind}`;
 
 export function imageRequest(req: ImageRequest, ctx: EngineCallContext): EngineRequest {
-  if (req.images && req.images.length > 0) {
-    throw new EngineCoverageError(
-      "Reference / input images aren't supported by the engine image API yet (text-to-image only): " +
-        "POST /api/generate/image has no `images` field. Use an image-to-video model, or wait for the " +
-        "engine image contract to add image support.",
-    );
-  }
-  // NOTE: req.background and req.n have no field on the engine image contract
-  // (it exposes only size/quality/outputFormat), and /image has no `extra` escape
-  // hatch — so those canonical fields are dropped. See the coverage-gap note above.
+  // The engine image body carries the full neutral image request now. Reference images
+  // are forwarded as-is; the engine rejects them for text-to-image-only providers
+  // (OpenAI) and validates image `extra` (no credential/batch/image-input keys), so the
+  // adapter forwards rather than second-guessing per-provider support.
   const body: EngineImageBody = {
     ...envelope(ctx),
     provider: ctx.provider,
     model: req.model,
     prompt: req.prompt,
+    ...(req.images && req.images.length > 0 ? { images: req.images } : {}),
     ...(req.size !== undefined ? { size: req.size } : {}),
     ...(req.quality !== undefined ? { quality: req.quality } : {}),
+    ...(req.background !== undefined ? { background: req.background } : {}),
+    ...(req.n !== undefined ? { n: req.n } : {}),
     ...(req.outputFormat !== undefined ? { outputFormat: req.outputFormat } : {}),
+    ...(req.extra !== undefined ? { extra: req.extra } : {}),
   };
   return { kind: "image", endpoint: endpoint("image"), body };
 }

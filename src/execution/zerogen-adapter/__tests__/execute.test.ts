@@ -132,15 +132,15 @@ describe("executeWithOpenAI", () => {
     expect(out).toEqual({ success: true, outputs: [{ type: "text", data: "generated text" }] });
   });
 
-  it("fails closed (no engine call) when a text-to-image request carries reference images", async () => {
+  it("forwards reference images to the engine (the engine enforces per-provider support)", async () => {
     const client = fakeClient();
-    const out = await executeWithOpenAI(
+    await executeWithOpenAI(
       mkInput({ id: "gpt-image-2" }, { prompt: "x", images: ["data:image/png;base64,AAA"] }),
       ctxWith(client),
     );
-    expect(out.success).toBe(false);
-    expect(out.error).toMatch(/\[openai\].*reference/i);
-    expect(client.generate).not.toHaveBeenCalled();
+    // The adapter forwards images; rejecting them for text-to-image-only OpenAI is the engine's job.
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
+    expect(client.calls[0]!.body).toMatchObject({ provider: "openai", images: ["data:image/png;base64,AAA"] });
   });
 
   it("fails closed for an unsupported modality (video)", async () => {
@@ -192,7 +192,20 @@ describe("executeWithByteplus", () => {
     expect(client.generate).not.toHaveBeenCalled();
   });
 
-  it("fails closed on Seedream image-to-image (engine /image has no images field)", async () => {
+  it("forwards canonical image params (background, n) and extra to the engine body", async () => {
+    const client = fakeClient();
+    await executeWithByteplus(
+      mkInput({ id: "seedream-5-0-lite", provider: "byteplus", capabilities: "text-to-image" }, {
+        prompt: "x",
+        parameters: { background: "transparent", n: 2, guidance: 7 },
+      }),
+      ctxWith(client),
+    );
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
+    expect(client.calls[0]!.body).toMatchObject({ background: "transparent", n: 2, extra: { guidance: 7 } });
+  });
+
+  it("routes Seedream image-to-image to /generate/image with the reference images", async () => {
     const client = fakeClient();
     const out = await executeWithByteplus(
       mkInput({ id: "seedream-5-0-lite", provider: "byteplus", capabilities: "image-to-image" }, {
@@ -201,9 +214,13 @@ describe("executeWithByteplus", () => {
       }),
       ctxWith(client),
     );
-    expect(out.success).toBe(false);
-    expect(out.error).toMatch(/\[byteplus\].*image/i);
-    expect(client.generate).not.toHaveBeenCalled();
+    expect(out.success).toBe(true);
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
+    expect(client.calls[0]!.body).toMatchObject({
+      provider: "byteplus",
+      prompt: "restyle",
+      images: ["data:image/png;base64,AAA"],
+    });
   });
 });
 

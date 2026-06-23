@@ -45,20 +45,18 @@ the request path yet. Flipping the live bindings is the final cutover step (belo
 
 These are **engine-side** (playground/appliance work), not node-banana work:
 
-1. **`/api/generate/image` has no `images` field** — it is text-to-image only.
-   BytePlus Seedream **image-to-image fails closed** here
-   (`EngineCoverageError`) rather than silently dropping the references. This is
-   the marquee PR #2 capability, so the live byteplus-image cutover is blocked
-   until the engine image contract carries reference images.
-2. **No `extra` passthrough on image/video/speech/music/soundEffect** — only the
-   `text` body carries `extra`. Provider-specific tuning params (e.g. a video
-   `seed`) on a media request are dropped. Surface them in `to-engine-request.ts`
-   when the engine adds the fields.
-3. **`/api/generate/image` exposes only `prompt`/`size`/`quality`/`outputFormat`** —
-   the canonical `background` and `n` image fields have no engine field and are
-   dropped too (e.g. an OpenAI `background: "transparent"` request falls back to the
-   provider default). Same pending engine change as (1)/(2).
-4. **`/api/generate/video` carries no source-audio input** — an `audio-to-video`
+> **Image inputs are now carried (engine PRO-110).** `/api/generate/image` accepts
+> `images` (refs + `asset:`), `extra`, `background`, and `n`, so BytePlus Seedream
+> image-to-image is forwarded normally; the engine rejects reference images for
+> text-to-image-only providers (OpenAI) and validates image `extra`.
+
+Remaining engine-side gaps (not node-banana work):
+
+1. **No `extra` passthrough on video/speech/music/soundEffect** — only `image` and
+   `text` carry `extra`. Provider tuning params (e.g. a video `seed`) on those media
+   requests are dropped. Surface them in `to-engine-request.ts` when the engine adds
+   the fields.
+2. **`/api/generate/video` carries no source-audio input** — an `audio-to-video`
    model can't deliver the audio that defines it (the video body has only `images`),
    so the executor **fails closed** rather than running video without the audio.
    Forward the audio from `videoRequest` and drop the guard once the engine video
@@ -78,10 +76,9 @@ today, so this only matters for a future text cutover.)
 
 1. **Decide the engine target.** The engine is project-scoped; pick how
    node-banana provisions/derives a `project` (and base URL) — e.g. a
-   `ZEROGEN_ENGINE_URL` + `ZEROGEN_PROJECT` env pair for dev, a per-user project
-   in cloud.
-2. **Close the engine `/image` gap** (reference images + `extra`) so byteplus
-   image-to-image survives the cutover.
+   `ZEROGEN_ENGINE_URL` + `ZEROGEN_PROJECT` env pair for local dev.
+2. ~~Close the engine `/image` gap~~ — **done (engine PRO-110):** `/api/generate/image`
+   now carries `images`/`extra`/`background`/`n`, and `imageRequest` forwards them.
 3. **Flip the bindings.** Replace the re-exports in
    `src/app/api/generate/providers/{byteplus,openai,elevenlabs}.ts` with
    `createNodeBananaBindings(ctx).generateWith*` (drop-in `(requestId, apiKey,

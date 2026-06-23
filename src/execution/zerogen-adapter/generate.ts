@@ -113,7 +113,8 @@ export async function executeWithOpenAI(
     if (pickCapability(input.model, ["image", "text"], "image") === "text") {
       return await run(textRequest(toTextRequest(input), callContext("openai", ctx)), ctx);
     }
-    // The engine image API is text-to-image only; imageRequest fails closed on reference images.
+    // OpenAI is text-to-image only: a request carrying reference images is rejected by
+    // the engine (the adapter forwards; the engine enforces per-provider support).
     return await run(imageRequest(toImageRequest(input), callContext("openai", ctx)), ctx);
   } catch (error) {
     return fail("openai", error);
@@ -126,9 +127,8 @@ export async function executeWithOpenAI(
  * ("seedream" → image) so a sparsely-tagged Seedream still reaches the image
  * port, defaulting to video otherwise.
  *
- * NOTE: Seedream **image-to-image** (a request carrying reference images) can't be
- * expressed against today's engine image contract and fails closed — see
- * {@link ./to-engine-request} EngineCoverageError.
+ * Seedream **image-to-image** (a request carrying reference images) is forwarded to
+ * `/api/generate/image` with `images` — the engine image contract carries them now.
  */
 function byteplusFallback(model: CapabilityModel): "image" | "video" {
   return model.id.toLowerCase().includes("seedream") ? "image" : "video";
