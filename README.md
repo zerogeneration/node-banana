@@ -80,12 +80,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Registry Authentication (required to install)
 
-`npm install` pulls one **private** dependency — `@zerospacestudios/providers`
-(the AI provider binding) — from GitHub Packages, so it needs a `read:packages`
-token exposed as `NODE_AUTH_TOKEN`. The repo's committed `.npmrc` reads it from
-the environment — **never commit a real token**. That project-level entry takes
-precedence over any `~/.npmrc`, so `NODE_AUTH_TOKEN` must be set even if you
-already have a user-level GitHub Packages token.
+`npm install` pulls one dependency — `@zerospacestudios/engine-client` (the
+neutral zerogen engine contract) — from GitHub Packages, so it needs a
+`read:packages` token exposed as `NODE_AUTH_TOKEN`. The repo's committed `.npmrc`
+reads it from the environment — **never commit a real token**. That project-level
+entry takes precedence over any `~/.npmrc`, so `NODE_AUTH_TOKEN` must be set even
+if you already have a user-level GitHub Packages token.
 
 ```bash
 # local dev (the gh login already carries read:packages):
@@ -118,12 +118,17 @@ Create a `.env.local` file in the root directory:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key          # Required for prompt-to-workflow
-OPENAI_API_KEY=your_openai_api_key          # Optional
+OPENAI_API_KEY=your_openai_api_key          # Optional (OpenAI LLM)
 ANTHROPIC_API_KEY=your_anthropic_api_key    # Optional
 REPLICATE_API_KEY=your_replicate_api_key    # Optional
 FAL_API_KEY=your_fal_api_key                # Optional
 KIE_API_KEY=your_kie_api_key                # Optional
 WAVESPEED_API_KEY=your_wavespeed_api_key    # Optional
+
+# BytePlus / OpenAI image / ElevenLabs run through the zerogen engine (it holds
+# those keys server-side). Point node-banana at a local engine; defaults shown:
+ZEROGEN_ENGINE_URL=http://127.0.0.1:4747    # Optional (engine base URL)
+ZEROGEN_PROJECT=node-banana                 # Optional (engine project id/slug)
 ```
 
 **API keys can also be configured in Project Settings within the app.** 

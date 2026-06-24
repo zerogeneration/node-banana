@@ -28,15 +28,21 @@ const imageReq: EngineRequest = {
 };
 
 function job(status: EngineJob["status"]): EngineJob {
+  const terminal = status === "succeeded" || status === "failed" || status === "cancelled";
   return {
     id: "j1",
     kind: "image",
+    projectId: "p1",
+    workflowId: "w1",
     status,
     runId: status === "queued" ? null : "run1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    startedAt: status === "queued" ? null : "2026-01-01T00:00:01.000Z",
+    completedAt: terminal ? "2026-01-01T00:00:02.000Z" : null,
     error: status === "failed" ? { name: "E", message: "boom" } : null,
     result:
       status === "succeeded"
-        ? { runId: "run1", assets: [], text: null, finishReason: null }
+        ? { runId: "run1", chunkId: null, assets: [], usage: null, text: null, finishReason: null }
         : null,
     eventsUrl: "/api/jobs/j1/events",
   };
