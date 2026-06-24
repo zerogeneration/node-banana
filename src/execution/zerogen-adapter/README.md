@@ -90,9 +90,10 @@ Done:
 
 Remaining:
 
-- ⏳ **Verify end-to-end** — run the engine locally + node-banana and exercise
-  byteplus / openai / elevenlabs through the engine (needs a running engine + a
-  full `npm install`).
+- ✅ **Verified end-to-end (dev)** — exercised byteplus (Seedream image), openai
+  (gpt-image-2), and elevenlabs (speech) through a running local engine via the
+  opt-in `src/app/api/generate/__tests__/engine-e2e.test.ts` (`ZEROGEN_E2E=1`):
+  real `POST /api/projects` → job submit → poll → inlined/url-only outputs.
 - ⏳ **Cloud media auth.** On the cloud path (client `authToken` set), url-only
   video/audio/3d outputs are bare engine URLs the browser fetches without the
   bearer. Serve them as **signed URLs** or **proxy** them through the app, or
