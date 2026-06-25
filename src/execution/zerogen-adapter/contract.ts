@@ -91,19 +91,23 @@ export interface ImageRequest {
   background?: string;
   outputFormat?: "png" | "jpeg" | "webp";
   n?: number;
-  /** Provider-specific passthrough. NOT yet carried by the engine `/image` contract. */
+  /** Provider-specific passthrough (carried by the engine `/image` contract). */
   extra?: Record<string, unknown>;
 }
 
 export interface VideoRequest {
   model: string;
   prompt?: string;
-  /** Reference / first-frame images (data URLs or http URLs) — carried by the engine `/video` contract. */
+  /** Reference images for image-to-video (mutually exclusive with first/last frame). */
   images?: string[];
+  /** First-frame image for first/last-frame video (Seedance); mutually exclusive with `images`. */
+  firstFrame?: string;
+  /** Last-frame image (requires `firstFrame`); the engine interpolates first → last. */
+  lastFrame?: string;
   ratio?: string;
   durationSeconds?: number;
   generateAudio?: boolean;
-  /** Provider-specific passthrough. NOT yet carried by the engine `/video` contract. */
+  /** Provider-specific passthrough (carried by the engine `/video` contract; e.g. seed/resolution). */
   extra?: Record<string, unknown>;
 }
 

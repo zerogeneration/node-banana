@@ -6,19 +6,20 @@
  *
  * ## Engine coverage notes (current contract)
  *
- * The image body now carries the full canonical surface — reference `images`
- * (edit / image-to-image), `background`, `n`, and the `extra` escape hatch — so
- * BytePlus Seedream image-to-image and OpenAI `background`/`n` survive the round
- * trip (PRO-110). The remaining narrowings are media-side:
- *  - **No `extra` passthrough on video/speech/music/soundEffect** — only the
- *    `image` and `text` bodies carry `extra`. Provider-specific tuning params (a
- *    video `seed`, etc.) on those media requests are dropped here; surface them
- *    below once the engine adds the fields.
- *  - **`/api/generate/video` carries no source-audio input** (only `images`). An
- *    `audio-to-video` model can't deliver the audio that defines it, so the executor
- *    **fails closed** (`declaresAudioToVideo` → reject) rather than running video
- *    without the audio. Forward the audio from {@link videoRequest} and drop the
- *    guard once the engine video contract accepts an audio input.
+ * The image body carries the full canonical surface — reference `images` (edit /
+ * image-to-image), `background`, `n`, and the `extra` escape hatch (PRO-110). The
+ * video body now also carries `firstFrame`/`lastFrame` (Seedance first/last-frame)
+ * and `extra` (provider params like `seed`/`resolution` survive the round trip).
+ * The remaining narrowings are media-side:
+ *  - **No `extra` passthrough on speech/music/soundEffect** — only the `image`,
+ *    `video`, and `text` bodies carry `extra`. Provider-specific tuning params on
+ *    those audio requests are dropped here; surface them below once the engine
+ *    adds the fields.
+ *  - **`/api/generate/video` carries no source-audio input** (only image/frame
+ *    inputs). An `audio-to-video` model can't deliver the audio that defines it,
+ *    so the executor **fails closed** (`declaresAudioToVideo` → reject) rather than
+ *    running video without the audio. Forward the audio from {@link videoRequest}
+ *    and drop the guard once the engine video contract accepts an audio input.
  */
 import type {
   EngineImageBody,
@@ -83,9 +84,12 @@ export function videoRequest(req: VideoRequest, ctx: EngineCallContext): EngineR
     model: req.model,
     ...(req.prompt !== undefined ? { prompt: req.prompt } : {}),
     ...(req.images !== undefined ? { images: req.images } : {}),
+    ...(req.firstFrame !== undefined ? { firstFrame: req.firstFrame } : {}),
+    ...(req.lastFrame !== undefined ? { lastFrame: req.lastFrame } : {}),
     ...(req.ratio !== undefined ? { ratio: req.ratio } : {}),
     ...(req.durationSeconds !== undefined ? { durationSeconds: req.durationSeconds } : {}),
     ...(req.generateAudio !== undefined ? { generateAudio: req.generateAudio } : {}),
+    ...(req.extra !== undefined ? { extra: req.extra } : {}),
   };
   return { kind: "video", endpoint: endpoint("video"), body };
 }

@@ -28,11 +28,14 @@ function asset(partial: Partial<EngineAsset>): EngineAsset {
   return {
     id: "a1",
     projectId: "p1",
+    organizationId: null,
+    folderId: null,
     workflowRunId: "run1",
     workflowStepId: null,
     assetType: "image",
     mimeType: "image/png",
     uri: "file:///tmp/a1",
+    storageRef: null,
     sha256: null,
     width: null,
     height: null,
@@ -82,6 +85,7 @@ function succeededJob(request: EngineRequest): EngineJob {
       assets: assetsByKind[request.kind] ?? [],
       usage: null,
       text: request.kind === "text" ? "generated text" : null,
+      reasoning: null,
       finishReason: request.kind === "text" ? "stop" : null,
     },
     eventsUrl: "/api/jobs/job1/events",
@@ -236,6 +240,38 @@ describe("executeWithByteplus", () => {
     expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
     expect(client.calls[0]!.body).toMatchObject({ images: ["data:image/png;base64,AAA"], prompt: "restyle" });
     expect(out.outputs?.[0]?.type).toBe("image");
+  });
+
+  it("routes Seedance first/last-frame to dedicated fields (not images)", async () => {
+    const client = fakeClient();
+    const out = await executeWithByteplus(
+      mkInput({ id: "seedance", provider: "byteplus", capabilities: "image-to-video" }, {
+        prompt: "pan",
+        parameters: { first_frame_url: "https://a/first.png", last_frame_url: "https://a/last.png" },
+      }),
+      ctxWith(client),
+    );
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/video");
+    expect(client.calls[0]!.body).toMatchObject({
+      firstFrame: "https://a/first.png",
+      lastFrame: "https://a/last.png",
+    });
+    // Frames are mutually exclusive with reference images.
+    expect((client.calls[0]!.body as Record<string, unknown>).images).toBeUndefined();
+    expect(out.outputs?.[0]?.type).toBe("video");
+  });
+
+  it("forwards provider video params (seed/resolution) via extra", async () => {
+    const client = fakeClient();
+    await executeWithByteplus(
+      mkInput({ id: "seedance", provider: "byteplus" }, {
+        prompt: "go",
+        parameters: { seed: 42, resolution: "1080p" },
+      }),
+      ctxWith(client),
+    );
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/video");
+    expect(client.calls[0]!.body).toMatchObject({ extra: { seed: 42, resolution: "1080p" } });
   });
 });
 

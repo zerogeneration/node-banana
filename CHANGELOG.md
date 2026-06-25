@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - **BytePlus Seedream image-to-image + OpenAI `background`/`n`** — Now that the engine image contract carries reference `images`, `extra`, `background`, and `n` (PRO-110), these survive the round trip instead of failing closed / being dropped.
+- **Seedance first/last-frame video + provider video params** — Upgraded to `@zerospacestudios/engine-client@0.1.4`. The engine video contract now carries `firstFrame`/`lastFrame` (Seedance first/last-frame interpolation, mutually exclusive with reference images) and an `extra` passthrough, so node-banana's `first_frame_url`/`last_frame_url` route to dedicated fields and provider params like `seed`/`resolution` reach the model instead of being silently dropped.
 
 ## [1.6.0] - 2026-04-21
 

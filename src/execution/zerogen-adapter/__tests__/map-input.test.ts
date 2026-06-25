@@ -52,23 +52,27 @@ describe("input mappers", () => {
     expect(req.extra).toBeUndefined();
   });
 
-  it("collects schema-named frame/image handles for image-to-video (first_frame, tail_image_url)", () => {
+  it("routes first/last-frame handles (first_frame, tail_image_url) to dedicated fields for image-to-video", () => {
     const req = toVideoRequest({
       model: { id: "seedance" },
       prompt: "animate",
       dynamicInputs: { first_frame: "data:image/png;base64,AAA", tail_image_url: "https://cdn/end.png" },
     });
-    expect(req.images).toEqual(["data:image/png;base64,AAA", "https://cdn/end.png"]);
+    // First/last-frame mode: dedicated fields, mutually exclusive with reference images.
+    expect(req.firstFrame).toBe("data:image/png;base64,AAA");
+    expect(req.lastFrame).toBe("https://cdn/end.png");
+    expect(req.images).toBeUndefined();
     expect(req.extra).toBeUndefined();
   });
 
-  it("does not sweep non-image params that merely contain 'image' (image_strength) into images", () => {
+  it("does not sweep non-image params that merely contain 'image' (image_strength) into the frame/images fields", () => {
     const req = toVideoRequest({
       model: { id: "m" },
       prompt: "x",
       parameters: { image_strength: 0.6, image_guidance: "high", first_frame: "https://a/f.png" },
     });
-    expect(req.images).toEqual(["https://a/f.png"]);
+    expect(req.firstFrame).toBe("https://a/f.png");
+    expect(req.images).toBeUndefined();
     // The numeric/enum *image* tuning params are not image refs, so they stay in extra.
     expect(req.extra).toEqual({ image_strength: 0.6, image_guidance: "high" });
   });

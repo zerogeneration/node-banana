@@ -8,11 +8,14 @@ function asset(partial: Partial<EngineAsset>): EngineAsset {
   return {
     id: "a1",
     projectId: "p1",
+    organizationId: null,
+    folderId: null,
     workflowRunId: "run1",
     workflowStepId: null,
     assetType: "image",
     mimeType: "image/png",
     uri: "file:///tmp/a1",
+    storageRef: null,
     sha256: null,
     width: null,
     height: null,
@@ -40,7 +43,7 @@ function job(kind: EngineJob["kind"], result: Partial<EngineJobResult> | null): 
     result:
       result === null
         ? null
-        : { runId: "run1", chunkId: null, assets: [], usage: null, text: null, finishReason: null, ...result },
+        : { runId: "run1", chunkId: null, assets: [], usage: null, text: null, reasoning: null, finishReason: null, ...result },
     eventsUrl: "/api/jobs/job1/events",
   };
 }

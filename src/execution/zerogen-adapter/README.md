@@ -47,20 +47,26 @@ engine target (`ZEROGEN_ENGINE_URL` + `ZEROGEN_PROJECT`).
 
 ## Known engine coverage gaps
 
-These are **engine-side** (playground/appliance work), not node-banana work. The
-image gaps are **closed** (PRO-110): `/api/generate/image` now carries `images`
-(edit / image-to-image), `extra`, `background`, and `n`, so BytePlus Seedream
-image-to-image and OpenAI `background`/`n` survive the round trip. Remaining:
+These are **engine-side** (playground/appliance work), not node-banana work. Most
+are now **closed** by the `@zerospacestudios/engine-client` contract:
+- **Image** (PRO-110): `/api/generate/image` carries `images` (edit / image-to-image),
+  `extra`, `background`, `n` — BytePlus Seedream image-to-image and OpenAI
+  `background`/`n` survive the round trip.
+- **Video** (engine-client 0.1.3/0.1.4): `/api/generate/video` carries
+  `firstFrame`/`lastFrame` (Seedance first/last-frame) and `extra` — provider params
+  like `seed`/`resolution` survive (no longer silently dropped).
 
-1. **No `extra` passthrough on video/speech/music/soundEffect** — only the `image`
-   and `text` bodies carry `extra`. Provider-specific tuning params (e.g. a video
-   `seed`) on those media requests are dropped. Surface them in
-   `to-engine-request.ts` when the engine adds the fields.
+Remaining:
+
+1. **No `extra` passthrough on speech/music/soundEffect** — only the `image`,
+   `video`, and `text` bodies carry `extra`. Provider-specific tuning params on
+   those audio requests are dropped. Surface them in `to-engine-request.ts` when
+   the engine adds the fields.
 2. **`/api/generate/video` carries no source-audio input** — an `audio-to-video`
-   model can't deliver the audio that defines it (the video body has only `images`),
-   so the executor **fails closed** rather than running video without the audio.
-   Forward the audio from `videoRequest` and drop the guard once the engine video
-   contract accepts audio.
+   model can't deliver the audio that defines it (the video body has image/frame
+   inputs only), so the executor **fails closed** rather than running video without
+   the audio. Forward the audio from `videoRequest` and drop the guard once the
+   engine video contract accepts audio.
 
 ### Output-contract prerequisite (text)
 

@@ -42,7 +42,7 @@ function job(status: EngineJob["status"]): EngineJob {
     error: status === "failed" ? { name: "E", message: "boom" } : null,
     result:
       status === "succeeded"
-        ? { runId: "run1", chunkId: null, assets: [], usage: null, text: null, finishReason: null }
+        ? { runId: "run1", chunkId: null, assets: [], usage: null, text: null, reasoning: null, finishReason: null }
         : null,
     eventsUrl: "/api/jobs/j1/events",
   };
