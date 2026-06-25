@@ -124,12 +124,22 @@ describe("/api/models route", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // 2 fal models + 7 gemini models (3 image + 4 video, always included)
-      expect(data.models).toHaveLength(9);
       expect(data.providers.fal.success).toBe(true);
       expect(data.providers.fal.count).toBe(2);
       expect(data.providers.gemini.success).toBe(true);
       expect(data.providers.gemini.count).toBe(7);
+      // Engine-backed providers are always available (no BYOK key needed).
+      expect(data.providers.openai.success).toBe(true);
+      expect(data.providers.byteplus.success).toBe(true);
+      expect(data.providers.elevenlabs.success).toBe(true);
+      // Total = fal + gemini + the engine-backed (openai/byteplus/elevenlabs) lists.
+      const total =
+        data.providers.fal.count +
+        data.providers.gemini.count +
+        data.providers.openai.count +
+        data.providers.byteplus.count +
+        data.providers.elevenlabs.count;
+      expect(data.models).toHaveLength(total);
     });
 
     it("GET: should return models from both providers when both keys present", async () => {
@@ -156,11 +166,26 @@ describe("/api/models route", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // 1 replicate + 1 fal + 7 gemini models (always included)
-      expect(data.models).toHaveLength(9);
       expect(data.providers.replicate.success).toBe(true);
       expect(data.providers.fal.success).toBe(true);
       expect(data.providers.gemini.success).toBe(true);
+      // Engine-backed providers are always included alongside the key-gated ones.
+      expect(data.providers.openai.success).toBe(true);
+      expect(data.providers.byteplus.success).toBe(true);
+      expect(data.providers.elevenlabs.success).toBe(true);
+    });
+
+    it("GET: surfaces engine-backed providers (openai/byteplus/elevenlabs) without a BYOK key", async () => {
+      // No OPENAI/BYTEPLUS/ELEVENLABS keys set: these run through the zerogen engine,
+      // so a provider filter must NOT 400 and must return their (hardcoded) models.
+      for (const provider of ["openai", "byteplus", "elevenlabs"]) {
+        const response = await GET(createMockGetRequest({ provider }));
+        const data = await response.json();
+        expect(response.status).toBe(200);
+        expect(data.success).toBe(true);
+        expect(data.models.length).toBeGreaterThan(0);
+        expect(data.models.every((m: { provider: string }) => m.provider === provider)).toBe(true);
+      }
     });
 
     it("GET: should return 400 when provider filter is replicate but no key", async () => {
@@ -221,9 +246,12 @@ describe("/api/models route", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // Only video models should be returned
-      const capabilities = data.models.flatMap((m: { capabilities: string[] }) => m.capabilities);
-      expect(capabilities.every((c: string) => c === "text-to-video")).toBe(true);
+      // Every returned model must declare the requested capability (multi-capability
+      // models — e.g. an engine-backed image-to-video — are kept, so assert `includes`).
+      expect(data.models.length).toBeGreaterThan(0);
+      expect(
+        data.models.every((m: { capabilities: string[] }) => m.capabilities.includes("text-to-video")),
+      ).toBe(true);
     });
 
     it("GET: should search by query param", async () => {
@@ -445,8 +473,14 @@ describe("/api/models route", () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      // 1 fal + 7 gemini models (always included)
-      expect(data.models).toHaveLength(8);
+      // fal + gemini + the always-included engine-backed providers; replicate failed.
+      const total =
+        data.providers.fal.count +
+        data.providers.gemini.count +
+        data.providers.openai.count +
+        data.providers.byteplus.count +
+        data.providers.elevenlabs.count;
+      expect(data.models).toHaveLength(total);
       expect(data.providers.replicate.success).toBe(false);
       expect(data.providers.fal.success).toBe(true);
       expect(data.providers.gemini.success).toBe(true);
@@ -679,13 +713,13 @@ describe("/api/models route", () => {
         return Promise.reject(new Error("Unknown URL"));
       });
 
-      const request = createMockGetRequest();
+      // Isolate to fal so the engine-backed providers don't inflate the list.
+      const request = createMockGetRequest({ provider: "fal" });
       const response = await GET(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      // 4 fal models + 7 gemini models (always included)
-      expect(data.models).toHaveLength(11);
+      expect(data.models).toHaveLength(4);
       expect(data.models.find((m: { id: string }) => m.id === "fal-ai/flux")?.capabilities).toEqual(["text-to-image"]);
       expect(data.models.find((m: { id: string }) => m.id === "fal-ai/img2img")?.capabilities).toEqual(["image-to-image"]);
       expect(data.models.find((m: { id: string }) => m.id === "fal-ai/t2v")?.capabilities).toEqual(["text-to-video"]);
@@ -707,13 +741,14 @@ describe("/api/models route", () => {
         return Promise.reject(new Error("Unknown URL"));
       });
 
-      const request = createMockGetRequest();
+      // Isolate to fal so the engine-backed providers don't inflate the list.
+      const request = createMockGetRequest({ provider: "fal" });
       const response = await GET(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      // 1 fal text-to-image + 1 fal text-to-speech (mapped to text-to-audio) + 7 gemini models (always included)
-      expect(data.models).toHaveLength(9);
+      // text-to-image kept + text-to-speech→text-to-audio kept; speech-to-text dropped.
+      expect(data.models).toHaveLength(2);
       expect(data.models.find((m: { id: string }) => m.id === "fal-ai/flux")).toBeDefined();
       expect(data.models.find((m: { id: string }) => m.id === "fal-ai/tts")?.capabilities).toEqual(["text-to-audio"]);
     });
@@ -749,30 +784,24 @@ describe("/api/models route", () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      // Sorted by provider (fal < gemini < replicate), then by name
-      expect(data.models[0].provider).toBe("fal");
-      expect(data.models[0].name).toBe("Alpha");
-      expect(data.models[1].provider).toBe("fal");
-      expect(data.models[1].name).toBe("Zebra");
-      // Gemini models: 3 image + 4 video, sorted by name
-      expect(data.models[2].provider).toBe("gemini");
-      expect(data.models[2].name).toBe("Nano Banana");
-      expect(data.models[3].provider).toBe("gemini");
-      expect(data.models[3].name).toBe("Nano Banana 2");
-      expect(data.models[4].provider).toBe("gemini");
-      expect(data.models[4].name).toBe("Nano Banana Pro");
-      expect(data.models[5].provider).toBe("gemini");
-      expect(data.models[5].name).toBe("Veo 3.1");
-      expect(data.models[6].provider).toBe("gemini");
-      expect(data.models[6].name).toBe("Veo 3.1 Fast");
-      expect(data.models[7].provider).toBe("gemini");
-      expect(data.models[7].name).toBe("Veo 3.1 Fast I2V");
-      expect(data.models[8].provider).toBe("gemini");
-      expect(data.models[8].name).toBe("Veo 3.1 I2V");
-      expect(data.models[9].provider).toBe("replicate");
-      expect(data.models[9].name).toBe("alpha");
-      expect(data.models[10].provider).toBe("replicate");
-      expect(data.models[10].name).toBe("zebra");
+      // Sorted by provider, then by name. Engine-backed providers (byteplus/elevenlabs/
+      // openai) are now interleaved alphabetically, so assert the ordering *property* and
+      // the relative order of the providers under test rather than absolute indices.
+      const key = (m: { provider: string; name: string }) => `${m.provider} ${m.name}`;
+      // Mirror the route's comparator (provider then name, via localeCompare).
+      const sorted = [...data.models].sort(
+        (a: { provider: string; name: string }, b: { provider: string; name: string }) =>
+          a.provider === b.provider ? a.name.localeCompare(b.name) : a.provider.localeCompare(b.provider),
+      );
+      expect(data.models.map(key)).toEqual(sorted.map(key));
+      const at = (provider: string, name: string) =>
+        data.models.findIndex((m: { provider: string; name: string }) => m.provider === provider && m.name === name);
+      // Within-provider name sort.
+      expect(at("fal", "Alpha")).toBeLessThan(at("fal", "Zebra"));
+      expect(at("replicate", "alpha")).toBeLessThan(at("replicate", "zebra"));
+      // Cross-provider grouping (provider alphabetical): fal < gemini < replicate.
+      expect(at("fal", "Zebra")).toBeLessThan(at("gemini", "Nano Banana"));
+      expect(at("gemini", "Veo 3.1 I2V")).toBeLessThan(at("replicate", "alpha"));
     });
   });
 });

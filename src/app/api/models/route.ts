@@ -1222,20 +1222,20 @@ export async function GET(
   const falKey = request.headers.get("X-Fal-Key") || process.env.FAL_API_KEY || null;
   const kieKey = request.headers.get("X-Kie-Key") || process.env.KIE_API_KEY || null;
   const wavespeedKey = request.headers.get("X-WaveSpeed-Key") || process.env.WAVESPEED_API_KEY || null;
-  const openaiKey = request.headers.get("X-OpenAI-API-Key") || process.env.OPENAI_API_KEY || null;
-  const byteplusKey =
-    request.headers.get("X-BytePlus-API-Key") || process.env.BYTEPLUS_API_KEY || process.env.ARK_API_KEY || null;
-  const elevenlabsKey = request.headers.get("X-ElevenLabs-API-Key") || process.env.ELEVENLABS_API_KEY || null;
 
-  // Build list of all available providers (have keys from env or client headers)
+  // openai / byteplus / elevenlabs run through the zerogen engine, which holds their
+  // provider keys server-side (see src/app/api/generate/providers/engine.ts). They are
+  // therefore engine-backed and discoverable WITHOUT a local BYOK key — the model lists
+  // are hardcoded, so no provider API call is needed to surface them.
+  const ENGINE_BACKED_PROVIDERS = ["openai", "byteplus", "elevenlabs"] as const;
+
+  // Build list of all available providers (key-gated standalone providers + engine-backed)
   const availableProviders: string[] = ["gemini"]; // Gemini always available
   if (falKey) availableProviders.push("fal");
   if (replicateKey) availableProviders.push("replicate");
   if (kieKey) availableProviders.push("kie");
   if (wavespeedKey) availableProviders.push("wavespeed");
-  if (openaiKey) availableProviders.push("openai");
-  if (byteplusKey) availableProviders.push("byteplus");
-  if (elevenlabsKey) availableProviders.push("elevenlabs");
+  availableProviders.push(...ENGINE_BACKED_PROVIDERS);
 
   // Determine which providers to fetch from (excluding gemini/kie - handled separately as hardcoded)
   const providersToFetch: ProviderType[] = [];
@@ -1282,44 +1282,16 @@ export async function GET(
     } else if (providerFilter === "fal" && falKey) {
       providersToFetch.push("fal");
     } else if (providerFilter === "openai") {
-      if (openaiKey) {
-        includeOpenai = true;
-      } else {
-        return NextResponse.json<ModelsErrorResponse>(
-          {
-            success: false,
-            error: "OpenAI API key required. Add OPENAI_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 400 }
-        );
-      }
+      // Engine-backed: no BYOK key gate (the engine holds the key).
+      includeOpenai = true;
     } else if (providerFilter === "byteplus") {
-      if (byteplusKey) {
-        includeByteplus = true;
-      } else {
-        return NextResponse.json<ModelsErrorResponse>(
-          {
-            success: false,
-            error: "BytePlus API key required. Add BYTEPLUS_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 400 }
-        );
-      }
+      includeByteplus = true;
     } else if (providerFilter === "elevenlabs") {
-      if (elevenlabsKey) {
-        includeElevenlabs = true;
-      } else {
-        return NextResponse.json<ModelsErrorResponse>(
-          {
-            success: false,
-            error: "ElevenLabs API key required. Add ELEVENLABS_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 400 }
-        );
-      }
+      includeElevenlabs = true;
     }
   } else {
-    // Include all providers that have keys configured
+    // Include all available providers: key-gated standalone ones, plus the
+    // engine-backed openai/byteplus/elevenlabs (always available — no BYOK key).
     includeGemini = true; // Gemini always available
     includeKie = kieKey ? true : false; // Kie only if API key is configured
     if (wavespeedKey) {
@@ -1331,15 +1303,9 @@ export async function GET(
     if (falKey) {
       providersToFetch.push("fal");
     }
-    if (openaiKey) {
-      includeOpenai = true;
-    }
-    if (byteplusKey) {
-      includeByteplus = true;
-    }
-    if (elevenlabsKey) {
-      includeElevenlabs = true;
-    }
+    includeOpenai = true;
+    includeByteplus = true;
+    includeElevenlabs = true;
   }
 
   // Gemini and Kie are always available (with key for Kie), so we don't fail if no external providers
