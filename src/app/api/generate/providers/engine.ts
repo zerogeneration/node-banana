@@ -24,8 +24,8 @@
  * branches are unchanged); only byteplus / openai / elevenlabs talk to the engine.
  */
 import { createEngineClient, createNodeBananaBindings } from "@/execution/zerogen-adapter";
+import { engineAuthToken, engineBaseUrl } from "@/lib/engine";
 
-const DEFAULT_ENGINE_URL = "http://127.0.0.1:4747";
 const DEFAULT_PROJECT = "node-banana";
 
 /**
@@ -43,10 +43,9 @@ interface EngineEnv {
 }
 
 function resolveEnv(): EngineEnv {
-  const baseUrl = process.env.ZEROGEN_ENGINE_URL?.trim() || DEFAULT_ENGINE_URL;
   const project = process.env.ZEROGEN_PROJECT?.trim() || DEFAULT_PROJECT;
-  const authToken = process.env.ZEROGEN_AUTH_TOKEN?.trim() || undefined;
-  return { baseUrl, project, ...(authToken ? { authToken } : {}) };
+  const authToken = engineAuthToken();
+  return { baseUrl: engineBaseUrl(), project, ...(authToken ? { authToken } : {}) };
 }
 
 // Build the client + bindings once per process, lazily, so importing this module

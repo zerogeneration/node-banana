@@ -2,18 +2,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 // Use vi.hoisted to define mocks that work with hoisted vi.mock
-const { mockGetCachedModels, mockSetCachedModels, mockGetCacheKey } = vi.hoisted(() => ({
+const { mockGetCachedModels, mockSetCachedModels, mockGetCacheKey, mockIsEngineReachable } = vi.hoisted(() => ({
   mockGetCachedModels: vi.fn().mockReturnValue(null), // Default to cache miss
   mockSetCachedModels: vi.fn(),
   mockGetCacheKey: vi.fn((provider: string, search?: string) =>
     search ? `${provider}:search:${search}` : `${provider}:models`
   ),
+  mockIsEngineReachable: vi.fn().mockResolvedValue(true), // Default: engine up
 }));
 
 vi.mock("@/lib/providers/cache", () => ({
   getCachedModels: mockGetCachedModels,
   setCachedModels: mockSetCachedModels,
   getCacheKey: mockGetCacheKey,
+}));
+
+vi.mock("@/lib/engine", () => ({
+  isEngineReachable: mockIsEngineReachable,
+  engineBaseUrl: () => "http://127.0.0.1:4747",
+  engineAuthToken: () => undefined,
+  resetEngineReachabilityCache: vi.fn(),
 }));
 
 import { GET } from "../route";
@@ -101,6 +109,8 @@ describe("/api/models route", () => {
     global.fetch = mockFetch;
     // Reset cache mock to default (miss)
     mockGetCachedModels.mockReturnValue(null);
+    // Default: the zerogen engine is reachable (engine-backed providers available).
+    mockIsEngineReachable.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -175,7 +185,7 @@ describe("/api/models route", () => {
       expect(data.providers.elevenlabs.success).toBe(true);
     });
 
-    it("GET: surfaces engine-backed providers (openai/byteplus/elevenlabs) without a BYOK key", async () => {
+    it("GET: surfaces engine-backed providers (openai/byteplus/elevenlabs) without a BYOK key when the engine is up", async () => {
       // No OPENAI/BYTEPLUS/ELEVENLABS keys set: these run through the zerogen engine,
       // so a provider filter must NOT 400 and must return their (hardcoded) models.
       for (const provider of ["openai", "byteplus", "elevenlabs"]) {
@@ -186,6 +196,23 @@ describe("/api/models route", () => {
         expect(data.models.length).toBeGreaterThan(0);
         expect(data.models.every((m: { provider: string }) => m.provider === provider)).toBe(true);
       }
+    });
+
+    it("GET: hides engine-backed providers when the engine is unreachable", async () => {
+      mockIsEngineReachable.mockResolvedValue(false);
+
+      // No filter: gemini still returns, but openai/byteplus/elevenlabs are absent.
+      const all = await (await GET(createMockGetRequest())).json();
+      expect(all.success).toBe(true);
+      expect(all.providers.openai).toBeUndefined();
+      expect(all.providers.byteplus).toBeUndefined();
+      expect(all.providers.elevenlabs).toBeUndefined();
+      expect(all.models.every((m: { provider: string }) => m.provider !== "openai" && m.provider !== "byteplus" && m.provider !== "elevenlabs")).toBe(true);
+
+      // Explicitly requesting one returns 503 (engine down), not a BYOK-key error.
+      const response = await GET(createMockGetRequest({ provider: "byteplus" }));
+      expect(response.status).toBe(503);
+      expect((await response.json()).error).toMatch(/engine is unreachable/i);
     });
 
     it("GET: should return 400 when provider filter is replicate but no key", async () => {
