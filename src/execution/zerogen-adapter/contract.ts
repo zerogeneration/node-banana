@@ -1,27 +1,36 @@
 /**
- * Vendored mirror of the **neutral zerogen engine contract**.
+ * The **neutral zerogen engine contract**, sourced from the published
+ * `@zerospacestudios/engine-client` package (plan §4.3 — the playground's only
+ * external surface, generated from `apps/server/src/schemas.ts`).
  *
- * The engine (`@zerogen/server`, `apps/server/src/schemas.ts`) speaks typed
- * generation requests over HTTP — the capability ports serialized, plus a small
- * project/workflow envelope. node-banana's execution-adapter maps the canvas
- * vocabulary onto these shapes and back.
+ * The engine speaks typed generation requests over HTTP — the capability ports
+ * serialized, plus a small project/workflow envelope. node-banana's
+ * execution-adapter maps the canvas vocabulary onto these shapes and back.
  *
- * Why a hand-mirror? The engine has not yet published its contract as a
- * consumable package (plan §4.3 — `@zerogen/server` is still `private`). Until it
- * does, the fork pins a structural copy here. **This file is the single place to
- * realign** if the engine contract drifts; when the package ships, replace these
- * declarations with imports from it.
+ * **Cutover (PRO-87):** this file used to *vendor* a hand-mirror of the engine
+ * contract because the engine hadn't published it. Now that
+ * `@zerospacestudios/engine-client` is live, the engine wire/body types below are
+ * **aliases over the package's generated contract** — there is no second copy to
+ * drift. Only node-banana's own types stay declared here:
+ *  1. **Neutral request types** — the port shapes (`TextRequest`, `ImageRequest`,
+ *     …) the mappers in {@link ./map-input} produce. These are the adapter's
+ *     intermediate representation, *not* the wire contract; {@link ./to-engine-request}
+ *     serializes them into the package's request bodies.
+ *  2. **node-banana view types** — `NbInput` / `NbOutput` / `GenerationOutput`,
+ *     the canvas request/result shapes the executor consumes and produces.
  *
- * Two layers live here:
- *  1. **Neutral request types** — the B2-stable port shapes (`TextRequest`,
- *     `ImageRequest`, …) the mappers in {@link ./map-input} produce. The engine's
- *     request bodies mirror these (a serialized port request + envelope).
- *  2. **Engine wire types** — the async job/asset shapes the engine returns
- *     (`EngineJob`, `EngineAsset`, …) that {@link ./map-output} consumes.
+ * The **engine wire types** (`EngineJob`, `EngineAsset`, the `Engine*Body`
+ * request bodies) are re-exported aliases of the package's `Job` / `components`
+ * schemas / `GenerateBody<K>`, so they can never silently diverge from the engine.
  */
+import type {
+  GenerateBody,
+  GenerateKind as EngineClientGenerateKind,
+  Job,
+} from "@zerospacestudios/engine-client";
 
 // ---------------------------------------------------------------------------
-// Capability vocabulary (mirrors @zerogen/providers' Capability union)
+// Capability vocabulary (node-banana's routing vocab; mirrors @zerogen/providers' Capability union)
 // ---------------------------------------------------------------------------
 
 export type Capability = "image" | "video" | "speech" | "music" | "soundEffect" | "text";
@@ -82,19 +91,23 @@ export interface ImageRequest {
   background?: string;
   outputFormat?: "png" | "jpeg" | "webp";
   n?: number;
-  /** Provider-specific passthrough. NOT yet carried by the engine `/image` contract. */
+  /** Provider-specific passthrough (carried by the engine `/image` contract). */
   extra?: Record<string, unknown>;
 }
 
 export interface VideoRequest {
   model: string;
   prompt?: string;
-  /** Reference / first-frame images (data URLs or http URLs) — carried by the engine `/video` contract. */
+  /** Reference images for image-to-video (mutually exclusive with first/last frame). */
   images?: string[];
+  /** First-frame image for first/last-frame video (Seedance); mutually exclusive with `images`. */
+  firstFrame?: string;
+  /** Last-frame image (requires `firstFrame`); the engine interpolates first → last. */
+  lastFrame?: string;
   ratio?: string;
   durationSeconds?: number;
   generateAudio?: boolean;
-  /** Provider-specific passthrough. NOT yet carried by the engine `/video` contract. */
+  /** Provider-specific passthrough (carried by the engine `/video` contract; e.g. seed/resolution). */
   extra?: Record<string, unknown>;
 }
 
@@ -178,55 +191,33 @@ export interface GenerationOutput {
 }
 
 // ---------------------------------------------------------------------------
-// Engine wire types (what the HTTP API returns)
+// Engine wire types — aliases over the published @zerospacestudios/engine-client
+// contract (the engine's `Job` / asset / `JobResult` shapes the HTTP API returns).
 // ---------------------------------------------------------------------------
 
-/** The generation kinds the engine serves (mirrors `JOB_KINDS`, minus `echo`). */
-export type GenerateKind = "image" | "video" | "speech" | "music" | "soundEffect" | "text";
+/** The generation kinds the adapter emits (the engine's served kinds, minus `echo`). */
+export type GenerateKind = Exclude<EngineClientGenerateKind, "echo">;
 
-export type EngineJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+/** The async handle the engine wraps around a run (the package's `Job`). */
+export type EngineJob = Job;
 
-export interface EngineSafeError {
-  name: string;
-  message: string;
-  retryable?: boolean;
-}
+export type EngineJobStatus = Job["status"];
 
-/** A stored generation artifact (mirrors the engine `Asset`; only the fields the adapter needs). */
-export interface EngineAsset {
-  id: string;
-  assetType: string;
-  mimeType: string | null;
-  /** Relative URL that serves the asset bytes (resolved against the engine base URL). */
-  url: string;
-}
+/** A finished job's payload (the engine `JobResult`). */
+export type EngineJobResult = NonNullable<Job["result"]>;
 
-/** A finished job's payload (mirrors the engine `JobResult`). */
-export interface EngineJobResult {
-  runId: string;
-  assets: EngineAsset[];
-  /** Generated text for a `text` job; null for media kinds. */
-  text: string | null;
-  finishReason: string | null;
-}
+/** A stored generation artifact (the engine `Asset`; the adapter reads id/assetType/mimeType/url). */
+export type EngineAsset = EngineJobResult["assets"][number];
 
-/** The async handle the engine wraps around a run (mirrors the engine `Job`). */
-export interface EngineJob {
-  id: string;
-  kind: GenerateKind | "echo";
-  status: EngineJobStatus;
-  runId: string | null;
-  error: EngineSafeError | null;
-  result: EngineJobResult | null;
-  /** Relative URL of the job's SSE event stream. */
-  eventsUrl: string;
-}
+/** The scrubbed error a failed job carries (the engine `SafeError`). */
+export type EngineSafeError = NonNullable<Job["error"]>;
 
 // ---------------------------------------------------------------------------
-// Engine request bodies (the neutral request + the project/workflow envelope)
+// Engine request bodies — aliases over the package's `GenerateBody<K>` (the
+// serialized port request + project/workflow envelope each endpoint accepts).
 // ---------------------------------------------------------------------------
 
-/** Run target every generate request carries. */
+/** Run target every generate request carries (a structural subset of every `GenerateBody`). */
 export interface EngineTarget {
   /** Project id or slug (must exist). */
   project: string;
@@ -234,70 +225,12 @@ export interface EngineTarget {
   workflow?: string;
 }
 
-interface EngineEnvelope extends EngineTarget {
-  metadata?: Record<string, unknown>;
-}
-
-export interface EngineImageBody extends EngineEnvelope {
-  prompt: string;
-  provider: string;
-  model?: string;
-  size?: string;
-  quality?: string;
-  outputFormat?: "png" | "jpeg" | "webp";
-}
-
-export interface EngineVideoBody extends EngineEnvelope {
-  prompt?: string;
-  images?: string[];
-  provider: string;
-  model?: string;
-  ratio?: string;
-  durationSeconds?: number;
-  generateAudio?: boolean;
-  referenceMode?: "direct" | "trusted";
-}
-
-export interface EngineSpeechBody extends EngineEnvelope {
-  text: string;
-  provider: string;
-  model?: string;
-  voiceId?: string;
-  outputFormat?: string;
-}
-
-export interface EngineMusicBody extends EngineEnvelope {
-  prompt: string;
-  provider: string;
-  model?: string;
-  lengthMs?: number;
-  outputFormat?: string;
-}
-
-export interface EngineSoundEffectBody extends EngineEnvelope {
-  prompt: string;
-  provider: string;
-  model?: string;
-  durationSeconds?: number;
-  outputFormat?: string;
-}
-
-export interface EngineTextBody extends EngineEnvelope {
-  provider: string;
-  model?: string;
-  prompt?: string;
-  messages?: TextMessage[];
-  system?: string;
-  images?: string[];
-  maxTokens?: number;
-  temperature?: number;
-  topP?: number;
-  stop?: string[];
-  responseFormat?: TextResponseFormat;
-  reasoningEffort?: ReasoningEffort;
-  thinking?: boolean | TextThinking;
-  extra?: Record<string, unknown>;
-}
+export type EngineImageBody = GenerateBody<"image">;
+export type EngineVideoBody = GenerateBody<"video">;
+export type EngineSpeechBody = GenerateBody<"speech">;
+export type EngineMusicBody = GenerateBody<"music">;
+export type EngineSoundEffectBody = GenerateBody<"soundEffect">;
+export type EngineTextBody = GenerateBody<"text">;
 
 export type EngineBody =
   | EngineImageBody

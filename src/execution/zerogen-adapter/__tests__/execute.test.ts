@@ -23,14 +23,39 @@ import {
 
 // --- fakes ------------------------------------------------------------------
 
+/** Build a full engine Asset (the package contract shape) from the few fields a test cares about. */
+function asset(partial: Partial<EngineAsset>): EngineAsset {
+  return {
+    id: "a1",
+    projectId: "p1",
+    organizationId: null,
+    folderId: null,
+    workflowRunId: "run1",
+    workflowStepId: null,
+    assetType: "image",
+    mimeType: "image/png",
+    uri: "file:///tmp/a1",
+    storageRef: null,
+    sha256: null,
+    width: null,
+    height: null,
+    durationMs: null,
+    metadataJson: null,
+    userMetadataJson: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    url: "/api/assets/a1/bytes",
+    ...partial,
+  };
+}
+
 function imageAsset(): EngineAsset {
-  return { id: "a1", assetType: "image", mimeType: "image/png", url: "/api/assets/a1/bytes" };
+  return asset({ id: "a1", assetType: "image", mimeType: "image/png", url: "/api/assets/a1/bytes" });
 }
 function videoAsset(): EngineAsset {
-  return { id: "v1", assetType: "video", mimeType: "video/mp4", url: "/api/assets/v1/bytes" };
+  return asset({ id: "v1", assetType: "video", mimeType: "video/mp4", url: "/api/assets/v1/bytes" });
 }
 function audioAsset(): EngineAsset {
-  return { id: "s1", assetType: "audio", mimeType: "audio/mpeg", url: "/api/assets/s1/bytes" };
+  return asset({ id: "s1", assetType: "audio", mimeType: "audio/mpeg", url: "/api/assets/s1/bytes" });
 }
 
 /** A succeeded job whose result fits the request kind. */
@@ -46,13 +71,21 @@ function succeededJob(request: EngineRequest): EngineJob {
   return {
     id: "job1",
     kind: request.kind,
+    projectId: "p1",
+    workflowId: "w1",
     status: "succeeded",
     runId: "run1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    startedAt: "2026-01-01T00:00:01.000Z",
+    completedAt: "2026-01-01T00:00:02.000Z",
     error: null,
     result: {
       runId: "run1",
+      chunkId: null,
       assets: assetsByKind[request.kind] ?? [],
+      usage: null,
       text: request.kind === "text" ? "generated text" : null,
+      reasoning: null,
       finishReason: request.kind === "text" ? "stop" : null,
     },
     eventsUrl: "/api/jobs/job1/events",
@@ -132,15 +165,18 @@ describe("executeWithOpenAI", () => {
     expect(out).toEqual({ success: true, outputs: [{ type: "text", data: "generated text" }] });
   });
 
-  it("fails closed (no engine call) when a text-to-image request carries reference images", async () => {
+  it("forwards reference images to the engine image body (the engine enforces provider capability)", async () => {
     const client = fakeClient();
     const out = await executeWithOpenAI(
       mkInput({ id: "gpt-image-2" }, { prompt: "x", images: ["data:image/png;base64,AAA"] }),
       ctxWith(client),
     );
-    expect(out.success).toBe(false);
-    expect(out.error).toMatch(/\[openai\].*reference/i);
-    expect(client.generate).not.toHaveBeenCalled();
+    // The engine image body now carries `images`; the adapter forwards rather than failing
+    // closed (the engine rejects references for a text-to-image-only provider like OpenAI).
+    expect(client.calls).toHaveLength(1);
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
+    expect(client.calls[0]!.body).toMatchObject({ images: ["data:image/png;base64,AAA"] });
+    expect(out.success).toBe(true);
   });
 
   it("fails closed for an unsupported modality (video)", async () => {
@@ -192,7 +228,7 @@ describe("executeWithByteplus", () => {
     expect(client.generate).not.toHaveBeenCalled();
   });
 
-  it("fails closed on Seedream image-to-image (engine /image has no images field)", async () => {
+  it("forwards Seedream image-to-image references to the engine image body", async () => {
     const client = fakeClient();
     const out = await executeWithByteplus(
       mkInput({ id: "seedream-5-0-lite", provider: "byteplus", capabilities: "image-to-image" }, {
@@ -201,9 +237,41 @@ describe("executeWithByteplus", () => {
       }),
       ctxWith(client),
     );
-    expect(out.success).toBe(false);
-    expect(out.error).toMatch(/\[byteplus\].*image/i);
-    expect(client.generate).not.toHaveBeenCalled();
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/image");
+    expect(client.calls[0]!.body).toMatchObject({ images: ["data:image/png;base64,AAA"], prompt: "restyle" });
+    expect(out.outputs?.[0]?.type).toBe("image");
+  });
+
+  it("routes Seedance first/last-frame to dedicated fields (not images)", async () => {
+    const client = fakeClient();
+    const out = await executeWithByteplus(
+      mkInput({ id: "seedance", provider: "byteplus", capabilities: "image-to-video" }, {
+        prompt: "pan",
+        parameters: { first_frame_url: "https://a/first.png", last_frame_url: "https://a/last.png" },
+      }),
+      ctxWith(client),
+    );
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/video");
+    expect(client.calls[0]!.body).toMatchObject({
+      firstFrame: "https://a/first.png",
+      lastFrame: "https://a/last.png",
+    });
+    // Frames are mutually exclusive with reference images.
+    expect((client.calls[0]!.body as Record<string, unknown>).images).toBeUndefined();
+    expect(out.outputs?.[0]?.type).toBe("video");
+  });
+
+  it("forwards provider video params (seed/resolution) via extra", async () => {
+    const client = fakeClient();
+    await executeWithByteplus(
+      mkInput({ id: "seedance", provider: "byteplus" }, {
+        prompt: "go",
+        parameters: { seed: 42, resolution: "1080p" },
+      }),
+      ctxWith(client),
+    );
+    expect(client.calls[0]!.endpoint).toBe("/api/generate/video");
+    expect(client.calls[0]!.body).toMatchObject({ extra: { seed: 42, resolution: "1080p" } });
   });
 });
 

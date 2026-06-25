@@ -7,8 +7,22 @@ const BASE_URL = "http://127.0.0.1:4747";
 function asset(partial: Partial<EngineAsset>): EngineAsset {
   return {
     id: "a1",
+    projectId: "p1",
+    organizationId: null,
+    folderId: null,
+    workflowRunId: "run1",
+    workflowStepId: null,
     assetType: "image",
     mimeType: "image/png",
+    uri: "file:///tmp/a1",
+    storageRef: null,
+    sha256: null,
+    width: null,
+    height: null,
+    durationMs: null,
+    metadataJson: null,
+    userMetadataJson: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
     url: "/api/assets/a1/bytes",
     ...partial,
   };
@@ -18,10 +32,18 @@ function job(kind: EngineJob["kind"], result: Partial<EngineJobResult> | null): 
   return {
     id: "job1",
     kind,
+    projectId: "p1",
+    workflowId: "w1",
     status: "succeeded",
     runId: "run1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    startedAt: "2026-01-01T00:00:01.000Z",
+    completedAt: "2026-01-01T00:00:02.000Z",
     error: null,
-    result: result === null ? null : { runId: "run1", assets: [], text: null, finishReason: null, ...result },
+    result:
+      result === null
+        ? null
+        : { runId: "run1", chunkId: null, assets: [], usage: null, text: null, reasoning: null, finishReason: null, ...result },
     eventsUrl: "/api/jobs/job1/events",
   };
 }

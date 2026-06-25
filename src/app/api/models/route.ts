@@ -35,6 +35,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProviderType } from "@/types";
 import { ProviderModel, ModelCapability } from "@/lib/providers";
+import { isEngineReachable } from "@/lib/engine";
 import {
   getCachedModels,
   setCachedModels,
@@ -1222,20 +1223,22 @@ export async function GET(
   const falKey = request.headers.get("X-Fal-Key") || process.env.FAL_API_KEY || null;
   const kieKey = request.headers.get("X-Kie-Key") || process.env.KIE_API_KEY || null;
   const wavespeedKey = request.headers.get("X-WaveSpeed-Key") || process.env.WAVESPEED_API_KEY || null;
-  const openaiKey = request.headers.get("X-OpenAI-API-Key") || process.env.OPENAI_API_KEY || null;
-  const byteplusKey =
-    request.headers.get("X-BytePlus-API-Key") || process.env.BYTEPLUS_API_KEY || process.env.ARK_API_KEY || null;
-  const elevenlabsKey = request.headers.get("X-ElevenLabs-API-Key") || process.env.ELEVENLABS_API_KEY || null;
 
-  // Build list of all available providers (have keys from env or client headers)
+  // openai / byteplus / elevenlabs run through the zerogen engine, which holds their
+  // provider keys server-side (see src/app/api/generate/providers/engine.ts). They need
+  // no local BYOK key — but they're only usable when the engine is up, so gate discovery
+  // on engine reachability rather than surfacing models that can't generate. Their model
+  // lists are hardcoded, so no provider API call is needed once the engine is confirmed up.
+  const ENGINE_BACKED_PROVIDERS = ["openai", "byteplus", "elevenlabs"] as const;
+  const engineUp = await isEngineReachable();
+
+  // Build list of all available providers (key-gated standalone providers + engine-backed)
   const availableProviders: string[] = ["gemini"]; // Gemini always available
   if (falKey) availableProviders.push("fal");
   if (replicateKey) availableProviders.push("replicate");
   if (kieKey) availableProviders.push("kie");
   if (wavespeedKey) availableProviders.push("wavespeed");
-  if (openaiKey) availableProviders.push("openai");
-  if (byteplusKey) availableProviders.push("byteplus");
-  if (elevenlabsKey) availableProviders.push("elevenlabs");
+  if (engineUp) availableProviders.push(...ENGINE_BACKED_PROVIDERS);
 
   // Determine which providers to fetch from (excluding gemini/kie - handled separately as hardcoded)
   const providersToFetch: ProviderType[] = [];
@@ -1281,45 +1284,29 @@ export async function GET(
       providersToFetch.push("replicate");
     } else if (providerFilter === "fal" && falKey) {
       providersToFetch.push("fal");
-    } else if (providerFilter === "openai") {
-      if (openaiKey) {
-        includeOpenai = true;
-      } else {
+    } else if (
+      providerFilter === "openai" ||
+      providerFilter === "byteplus" ||
+      providerFilter === "elevenlabs"
+    ) {
+      // Engine-backed: no BYOK key gate (the engine holds the key), but only
+      // available when the engine is reachable.
+      if (!engineUp) {
         return NextResponse.json<ModelsErrorResponse>(
           {
             success: false,
-            error: "OpenAI API key required. Add OPENAI_API_KEY to .env.local or configure in Settings.",
+            error: `The zerogen engine is unreachable, so ${providerFilter} models aren't available. Start the engine (ZEROGEN_ENGINE_URL) and retry.`,
           },
-          { status: 400 }
+          { status: 503 }
         );
       }
-    } else if (providerFilter === "byteplus") {
-      if (byteplusKey) {
-        includeByteplus = true;
-      } else {
-        return NextResponse.json<ModelsErrorResponse>(
-          {
-            success: false,
-            error: "BytePlus API key required. Add BYTEPLUS_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 400 }
-        );
-      }
-    } else if (providerFilter === "elevenlabs") {
-      if (elevenlabsKey) {
-        includeElevenlabs = true;
-      } else {
-        return NextResponse.json<ModelsErrorResponse>(
-          {
-            success: false,
-            error: "ElevenLabs API key required. Add ELEVENLABS_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 400 }
-        );
-      }
+      includeOpenai = providerFilter === "openai";
+      includeByteplus = providerFilter === "byteplus";
+      includeElevenlabs = providerFilter === "elevenlabs";
     }
   } else {
-    // Include all providers that have keys configured
+    // Include all available providers: key-gated standalone ones, plus the
+    // engine-backed openai/byteplus/elevenlabs when the engine is reachable.
     includeGemini = true; // Gemini always available
     includeKie = kieKey ? true : false; // Kie only if API key is configured
     if (wavespeedKey) {
@@ -1331,15 +1318,9 @@ export async function GET(
     if (falKey) {
       providersToFetch.push("fal");
     }
-    if (openaiKey) {
-      includeOpenai = true;
-    }
-    if (byteplusKey) {
-      includeByteplus = true;
-    }
-    if (elevenlabsKey) {
-      includeElevenlabs = true;
-    }
+    includeOpenai = engineUp;
+    includeByteplus = engineUp;
+    includeElevenlabs = engineUp;
   }
 
   // Gemini and Kie are always available (with key for Kie), so we don't fail if no external providers

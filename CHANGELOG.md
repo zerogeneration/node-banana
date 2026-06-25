@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **BytePlus / OpenAI image / ElevenLabs run through the zerogen engine** — These three providers cut over from the in-process `@zerospacestudios/providers/node-banana` library-embed to the fork's execution-adapter talking to the zerogen engine over HTTP. The engine holds their provider keys server-side, so node-banana's per-provider BYOK 401 gates are removed and no `BYTEPLUS_API_KEY` / `OPENAI_API_KEY` / `ELEVENLABS_API_KEY` is needed for generation. Point node-banana at the engine via `ZEROGEN_ENGINE_URL` (default `http://127.0.0.1:4747`) and `ZEROGEN_PROJECT` (default `node-banana`). gemini / replicate / fal / kie / wavespeed are unchanged.
+- **Adopt the published `@zerospacestudios/engine-client` contract** — The adapter's vendored engine contract mirror is retired; its engine wire/body types are now aliases over the published package, so they can't drift from the engine. The private `@zerospacestudios/providers` dependency is dropped (GitHub Packages auth via `NODE_AUTH_TOKEN` is still required for `engine-client`).
+
+### Added
+
+- **BytePlus Seedream image-to-image + OpenAI `background`/`n`** — Now that the engine image contract carries reference `images`, `extra`, `background`, and `n` (PRO-110), these survive the round trip instead of failing closed / being dropped.
+- **Seedance first/last-frame video + provider video params** — Upgraded to `@zerospacestudios/engine-client@0.1.4`. The engine video contract now carries `firstFrame`/`lastFrame` (Seedance first/last-frame interpolation, mutually exclusive with reference images) and an `extra` passthrough, so node-banana's `first_frame_url`/`last_frame_url` route to dedicated fields and provider params like `seed`/`resolution` reach the model instead of being silently dropped.
+
 ## [1.6.0] - 2026-04-21
 
 ### Added

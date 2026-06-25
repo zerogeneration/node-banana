@@ -343,6 +343,13 @@ export function toImageRequest(input: NbInput): ImageRequest {
 // directly, keeping `outputFormat` rather than burying it in `extra` (which the engine
 // image body drops).
 
+// First/last-frame inputs (Seedance) ride on dedicated `firstFrame`/`lastFrame`
+// fields, mutually exclusive with reference `images`. node-banana wires them as
+// `first_frame_url`/`last_frame_url`; the canonical/camelCase spellings are also
+// accepted.
+const FIRST_FRAME_KEYS = ["first_frame_url", "first_frame", "firstFrame"];
+const LAST_FRAME_KEYS = ["last_frame_url", "last_frame", "lastFrame", "tail_image_url"];
+
 const VIDEO_KEYS = [
   "prompt",
   "ratio",
@@ -358,10 +365,28 @@ const VIDEO_KEYS = [
   ...IMAGE_INPUT_KEYS,
 ];
 
+/** First non-blank image-like value across the given keys (string or first array element). */
+function pickFrame(params: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const v = firstString(params[key]);
+    if (v && v.trim() !== "") return v;
+  }
+  return undefined;
+}
+
 export function toVideoRequest(input: NbInput): VideoRequest {
   const params = mergedParams(input);
-  const { images, schemaKeys } = collectImages(input);
-  const rest = leftover(params, [...VIDEO_KEYS, ...schemaKeys]);
+  const firstFrame = pickFrame(params, FIRST_FRAME_KEYS);
+  const lastFrame = pickFrame(params, LAST_FRAME_KEYS);
+  const { images: collected, schemaKeys } = collectImages(input);
+  // Frame keys never leak into `extra` (they have dedicated fields).
+  const rest = leftover(params, [...VIDEO_KEYS, ...FIRST_FRAME_KEYS, ...LAST_FRAME_KEYS, ...schemaKeys]);
+  // First/last-frame mode wins: it's mutually exclusive with `images` on the engine,
+  // so drop reference images (and the frame values themselves) when a first frame is set.
+  const frameValues = new Set([firstFrame, lastFrame].filter((v): v is string => Boolean(v)));
+  const refImages = collected?.filter((u) => !frameValues.has(u));
+  const useFrames = firstFrame !== undefined;
+  const images = useFrames ? undefined : refImages && refImages.length > 0 ? refImages : undefined;
   const prompt = resolvePrompt(input);
   const ratio = strOpt(params.ratio) ?? strOpt(params.aspect_ratio) ?? strOpt(params.aspectRatio);
   const duration =
@@ -370,6 +395,8 @@ export function toVideoRequest(input: NbInput): VideoRequest {
   return {
     model: modelId(input, params),
     ...(prompt ? { prompt } : {}),
+    ...(useFrames ? { firstFrame } : {}),
+    ...(useFrames && lastFrame ? { lastFrame } : {}),
     ...(images ? { images } : {}),
     ...(ratio ? { ratio } : {}),
     ...(duration != null ? { durationSeconds: duration } : {}),

@@ -1,9 +1,9 @@
 /**
- * Auth preflight for the private `@zerospacestudios/providers` dependency
- * (GitHub Packages). Run `npm run check:auth` before `npm install`, or as a CI
- * pre-install step, to confirm NODE_AUTH_TOKEN is set — the committed `.npmrc`
- * consumes it via `${NODE_AUTH_TOKEN}`, and without it `npm install` fails with
- * an opaque 401/403 from npm.pkg.github.com.
+ * Auth preflight for the `@zerospacestudios/engine-client` dependency (the neutral
+ * zerogen engine contract, published to GitHub Packages). Run `npm run check:auth`
+ * before `npm install`, or as a CI pre-install step, to confirm NODE_AUTH_TOKEN is
+ * set — the committed `.npmrc` consumes it via `${NODE_AUTH_TOKEN}`, and without it
+ * `npm install` fails with an opaque 401/403 from npm.pkg.github.com.
  *
  * This is intentionally a standalone command, not a `preinstall` hook: npm
  * resolves and fetches dependencies before lifecycle scripts run, so a hook
@@ -17,10 +17,10 @@ if (process.env.NODE_AUTH_TOKEN && process.env.NODE_AUTH_TOKEN.trim()) {
 console.error(`
 ✖ NODE_AUTH_TOKEN is not set.
 
-  node-banana installs the private package @zerospacestudios/providers from
-  GitHub Packages, which needs a read:packages token exposed as NODE_AUTH_TOKEN
-  (consumed by the repo's .npmrc). It overrides any ~/.npmrc token for this
-  registry, so it must be set here.
+  node-banana installs @zerospacestudios/engine-client (the zerogen engine
+  contract) from GitHub Packages, which needs a read:packages token exposed as
+  NODE_AUTH_TOKEN (consumed by the repo's .npmrc). It overrides any ~/.npmrc token
+  for this registry, so it must be set here.
 
   Local dev (the gh login carries read:packages):
     export NODE_AUTH_TOKEN="$(gh auth token)"

@@ -454,18 +454,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // User-provided key takes precedence over env variable (ARK_API_KEY accepted as an alias)
-      const byteplusApiKey =
-        request.headers.get("X-BytePlus-API-Key") || process.env.BYTEPLUS_API_KEY || process.env.ARK_API_KEY;
-      if (!byteplusApiKey) {
-        return NextResponse.json<GenerateResponse>(
-          {
-            success: false,
-            error: "BytePlus API key not configured. Add BYTEPLUS_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 401 }
-        );
-      }
+      // No BYOK gate: byteplus runs through the zerogen engine, which holds the
+      // provider key server-side (see ./providers/engine). The legacy apiKey arg is ignored.
 
       // Keep Data URIs as-is since localhost URLs won't work
       const processedImages: string[] = images ? [...images] : [];
@@ -502,7 +492,7 @@ export async function POST(request: NextRequest) {
         dynamicInputs: processedDynamicInputs,
       };
 
-      const result = await generateWithByteplus(requestId, byteplusApiKey, genInput);
+      const result = await generateWithByteplus(requestId, "", genInput);
 
       if (!result.success) {
         return NextResponse.json<GenerateResponse>(
@@ -534,17 +524,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // User-provided key takes precedence over env variable
-      const openaiApiKey = request.headers.get("X-OpenAI-API-Key") || process.env.OPENAI_API_KEY;
-      if (!openaiApiKey) {
-        return NextResponse.json<GenerateResponse>(
-          {
-            success: false,
-            error: "OpenAI API key not configured. Add OPENAI_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 401 }
-        );
-      }
+      // No BYOK gate: openai runs through the zerogen engine, which holds the
+      // provider key server-side (see ./providers/engine). The legacy apiKey arg is ignored.
 
       // Keep Data URIs as-is since localhost URLs won't work
       const processedImages: string[] = images ? [...images] : [];
@@ -581,7 +562,7 @@ export async function POST(request: NextRequest) {
         dynamicInputs: processedDynamicInputs,
       };
 
-      const result = await generateWithOpenAI(requestId, openaiApiKey, genInput);
+      const result = await generateWithOpenAI(requestId, "", genInput);
 
       if (!result.success) {
         return NextResponse.json<GenerateResponse>(
@@ -613,17 +594,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // User-provided key takes precedence over env variable
-      const elevenlabsApiKey = request.headers.get("X-ElevenLabs-API-Key") || process.env.ELEVENLABS_API_KEY;
-      if (!elevenlabsApiKey) {
-        return NextResponse.json<GenerateResponse>(
-          {
-            success: false,
-            error: "ElevenLabs API key not configured. Add ELEVENLABS_API_KEY to .env.local or configure in Settings.",
-          },
-          { status: 401 }
-        );
-      }
+      // No BYOK gate: elevenlabs runs through the zerogen engine, which holds the
+      // provider key server-side (see ./providers/engine). The legacy apiKey arg is ignored.
 
       // ElevenLabs audio generation takes the prompt/text only; no image inputs.
       const processedImages: string[] = images ? [...images] : [];
@@ -660,7 +632,7 @@ export async function POST(request: NextRequest) {
         dynamicInputs: processedDynamicInputs,
       };
 
-      const result = await generateWithElevenLabs(requestId, elevenlabsApiKey, genInput);
+      const result = await generateWithElevenLabs(requestId, "", genInput);
 
       if (!result.success) {
         return NextResponse.json<GenerateResponse>(
