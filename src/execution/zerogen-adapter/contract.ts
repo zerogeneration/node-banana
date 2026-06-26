@@ -84,7 +84,7 @@ export interface TextRequest {
 export interface ImageRequest {
   model: string;
   prompt: string;
-  /** Reference images for edit / image-to-image. NOT yet carried by the engine `/image` contract. */
+  /** Reference images for edit / image-to-image (carried by the engine `/image` contract). */
   images?: string[];
   size?: string;
   quality?: string;
