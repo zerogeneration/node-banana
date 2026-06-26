@@ -213,15 +213,33 @@ const IMAGE_INPUT_KEYS = [
 ];
 
 /**
+ * Inpainting edit-mask keys. A mask is a SINGLE edit overlay (not a reference image),
+ * so it rides on the dedicated `mask` field — never collected into `images`. Excluded
+ * from {@link isSchemaImageKey} so a spelling like `image_mask` isn't swept in as a ref.
+ */
+const MASK_KEYS = [
+  "mask",
+  "mask_url",
+  "maskUrl",
+  "image_mask",
+  "imageMask",
+  "mask_image",
+  "maskImage",
+  "inpaint_mask",
+  "inpaintMask",
+];
+
+/**
  * A schema-named image/frame handle NOT in {@link IMAGE_INPUT_KEYS}. node-banana
  * derives handle names from each model's OpenAPI schema, so an image input can
  * arrive under an unanticipated key. Match the generate route's own detection
  * (the key contains "image" or "frame"); to avoid sweeping in numeric tuning
  * params like `image_strength`, only image-like *values* are collected from these
- * keys (see {@link looksLikeImageRef}).
+ * keys (see {@link looksLikeImageRef}). Mask keys are excluded — a mask is an edit
+ * overlay, not a reference image (it routes to the dedicated `mask` field instead).
  */
 function isSchemaImageKey(key: string): boolean {
-  if (IMAGE_INPUT_KEYS.includes(key)) return false;
+  if (IMAGE_INPUT_KEYS.includes(key) || MASK_KEYS.includes(key)) return false;
   const k = key.toLowerCase();
   return k.includes("image") || k.includes("frame");
 }
@@ -311,7 +329,17 @@ const IMAGE_KEYS = [
   "model",
   "modelId",
   ...IMAGE_INPUT_KEYS,
+  ...MASK_KEYS,
 ];
+
+/** First non-blank image-like mask ref across {@link MASK_KEYS} (string or first array element). */
+function pickMask(params: Record<string, unknown>): string | undefined {
+  for (const key of MASK_KEYS) {
+    const v = firstString(params[key]);
+    if (v && v.trim() !== "") return v;
+  }
+  return undefined;
+}
 
 function imageOutputFormat(params: Record<string, unknown>): ImageRequest["outputFormat"] {
   const v = strOpt(params.outputFormat) ?? strOpt(params.output_format);
@@ -321,12 +349,14 @@ function imageOutputFormat(params: Record<string, unknown>): ImageRequest["outpu
 export function toImageRequest(input: NbInput): ImageRequest {
   const params = mergedParams(input);
   const { images, schemaKeys } = collectImages(input);
+  const mask = pickMask(params);
   const rest = leftover(params, [...IMAGE_KEYS, ...schemaKeys]);
   const format = imageOutputFormat(params);
   return {
     model: modelId(input, params),
     prompt: resolvePrompt(input),
     ...(images ? { images } : {}),
+    ...(mask ? { mask } : {}),
     ...(strOpt(params.size) ? { size: strOpt(params.size) } : {}),
     ...(strOpt(params.quality) ? { quality: strOpt(params.quality) } : {}),
     ...(strOpt(params.background) ? { background: strOpt(params.background) } : {}),

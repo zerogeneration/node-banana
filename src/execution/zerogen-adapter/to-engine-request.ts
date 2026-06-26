@@ -67,6 +67,7 @@ export function imageRequest(req: ImageRequest, ctx: EngineCallContext): EngineR
     model: req.model,
     prompt: req.prompt,
     ...(req.images !== undefined ? { images: req.images } : {}),
+    ...(req.mask !== undefined ? { mask: req.mask } : {}),
     ...(req.size !== undefined ? { size: req.size } : {}),
     ...(req.quality !== undefined ? { quality: req.quality } : {}),
     ...(req.background !== undefined ? { background: req.background } : {}),

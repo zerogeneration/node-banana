@@ -86,6 +86,12 @@ export interface ImageRequest {
   prompt: string;
   /** Reference images for edit / image-to-image (carried by the engine `/image` contract). */
   images?: string[];
+  /**
+   * Edit mask for inpainting: a single http(s)/data/`asset:` ref (a PNG) whose transparent
+   * pixels mark the region to regenerate. Applied to the first {@link images} entry; requires
+   * `images` and is OpenAI gpt-image-only (the engine rejects it for other providers).
+   */
+  mask?: string;
   size?: string;
   quality?: string;
   background?: string;
