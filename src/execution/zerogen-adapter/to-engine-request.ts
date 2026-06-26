@@ -2,7 +2,7 @@
  * Neutral request → engine HTTP request (`{ kind, endpoint, body }`). This is the
  * serialization boundary between the moved mapping (port-shaped neutral requests)
  * and the engine's typed generate contract (the published
- * `@zerospacestudios/engine-client` `GenerateBody<K>` shapes).
+ * `@zerogeneration/engine-client` `GenerateBody<K>` shapes).
  *
  * ## Engine coverage notes (current contract)
  *

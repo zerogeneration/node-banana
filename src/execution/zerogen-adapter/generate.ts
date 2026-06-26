@@ -294,7 +294,7 @@ export async function executeWithProvider(
  * fixed engine context. This is the seam for the eventual route cutover: a
  * binding file (e.g. `src/app/api/generate/providers/byteplus.ts`) re-exports
  * `createNodeBananaBindings(ctx).generateWithByteplus` instead of importing from
- * `@zerospacestudios/providers/node-banana`.
+ * `@zerogeneration/providers/node-banana`.
  *
  * `requestId`/`apiKey` are accepted for signature compatibility and ignored:
  * `requestId` is node-banana's own correlation id (the engine mints its own), and

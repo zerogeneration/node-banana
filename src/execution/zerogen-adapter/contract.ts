@@ -1,6 +1,6 @@
 /**
  * The **neutral zerogen engine contract**, sourced from the published
- * `@zerospacestudios/engine-client` package (plan §4.3 — the playground's only
+ * `@zerogeneration/engine-client` package (plan §4.3 — the playground's only
  * external surface, generated from `apps/server/src/schemas.ts`).
  *
  * The engine speaks typed generation requests over HTTP — the capability ports
@@ -9,7 +9,7 @@
  *
  * **Cutover (PRO-87):** this file used to *vendor* a hand-mirror of the engine
  * contract because the engine hadn't published it. Now that
- * `@zerospacestudios/engine-client` is live, the engine wire/body types below are
+ * `@zerogeneration/engine-client` is live, the engine wire/body types below are
  * **aliases over the package's generated contract** — there is no second copy to
  * drift. Only node-banana's own types stay declared here:
  *  1. **Neutral request types** — the port shapes (`TextRequest`, `ImageRequest`,
@@ -27,7 +27,7 @@ import type {
   GenerateBody,
   GenerateKind as EngineClientGenerateKind,
   Job,
-} from "@zerospacestudios/engine-client";
+} from "@zerogeneration/engine-client";
 
 // ---------------------------------------------------------------------------
 // Capability vocabulary (node-banana's routing vocab; mirrors @zerogen/providers' Capability union)
@@ -191,7 +191,7 @@ export interface GenerationOutput {
 }
 
 // ---------------------------------------------------------------------------
-// Engine wire types — aliases over the published @zerospacestudios/engine-client
+// Engine wire types — aliases over the published @zerogeneration/engine-client
 // contract (the engine's `Job` / asset / `JobResult` shapes the HTTP API returns).
 // ---------------------------------------------------------------------------
 

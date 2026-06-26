@@ -1,10 +1,10 @@
 # Example CI for node-banana. Rename to `ci.yml` to activate.
 #
-# Demonstrates installing the private `@zerospacestudios/providers` dependency
+# Demonstrates installing the private `@zerogeneration/providers` dependency
 # (GitHub Packages) without managing a PAT: the job grants `packages: read` and
 # passes the built-in `GITHUB_TOKEN` as `NODE_AUTH_TOKEN`, which the committed
 # root `.npmrc` consumes. No `registry-url` is needed in setup-node because the
-# repo's `.npmrc` already maps the @zerospacestudios scope.
+# repo's `.npmrc` already maps the @zerogeneration scope.
 #
 # NOTE: `GITHUB_TOKEN` can read same-owner packages only if the package grants
 # this repo access (Package settings -> Manage Actions access). If the package

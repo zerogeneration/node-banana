@@ -80,7 +80,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Registry Authentication (required to install)
 
-`npm install` pulls one dependency — `@zerospacestudios/engine-client` (the
+`npm install` pulls one dependency — `@zerogeneration/engine-client` (the
 neutral zerogen engine contract) — from GitHub Packages, so it needs a
 `read:packages` token exposed as `NODE_AUTH_TOKEN`. The repo's committed `.npmrc`
 reads it from the environment — **never commit a real token**. That project-level

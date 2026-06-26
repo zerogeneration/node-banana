@@ -1,7 +1,7 @@
 /**
  * node-banana request → neutral engine request mapping (the "toEngineRequest"
  * input side). Moved ~verbatim from the playground's
- * `@zerospacestudios/providers/node-banana` so the mapping — and its subtle
+ * `@zerogeneration/providers/node-banana` so the mapping — and its subtle
  * blank-input / passthrough behavior — survives the relocation unchanged; the
  * ported tests are the oracle that it did. The only edits vs. the original are
  * the import retargets: neutral request types come from {@link ./contract}
