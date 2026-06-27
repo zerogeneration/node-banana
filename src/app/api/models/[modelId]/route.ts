@@ -1145,7 +1145,7 @@ function getKieSchema(modelId: string): ExtractedSchema {
  */
 /**
  * Static parameter schema for OpenAI image models (no schema-discovery API).
- * Params mirror what the @zerospacestudios/providers OpenAI adapter consumes.
+ * Params mirror what the @zerogeneration/providers OpenAI adapter consumes.
  */
 function getOpenAISchema(modelId: string): ExtractedSchema {
   const promptInput: ModelInput = { name: "prompt", type: "text", required: true, label: "Prompt" };
@@ -1180,7 +1180,7 @@ function getOpenAISchema(modelId: string): ExtractedSchema {
  * Seedream (image) and Seedance (video). The binding routes by the "seedream"
  * substring in the model id, so we branch the schema the same way.
  *
- * Params mirror what the @zerospacestudios/providers BytePlus adapter consumes;
+ * Params mirror what the @zerogeneration/providers BytePlus adapter consumes;
  * unknown params (image: seed / video: resolution, seed) flow through the
  * adapter's `extra` escape hatch.
  */

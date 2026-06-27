@@ -542,7 +542,7 @@ const OPENAI_MODELS: ProviderModel[] = [
 ];
 
 // BytePlus image (Seedream) + video (Seedance) models (curated; ids verified
-// against @zerospacestudios/providers defaults.js and byteplus-js). The binding
+// against @zerogeneration/providers defaults.js and byteplus-js). The binding
 // routes by the "seedream" substring in the id ("seedream" → image port, every
 // other id → video), so these ids must be kept exactly.
 const BYTEPLUS_MODELS: ProviderModel[] = [
@@ -594,7 +594,7 @@ const BYTEPLUS_MODELS: ProviderModel[] = [
 ];
 
 // ElevenLabs audio models (curated). node-banana tags all audio as
-// "text-to-audio"; the @zerospacestudios/providers binding routes speech/music/sfx by
+// "text-to-audio"; the @zerogeneration/providers binding routes speech/music/sfx by
 // model id, so these ids must be kept exactly.
 const ELEVENLABS_MODELS: ProviderModel[] = [
   {

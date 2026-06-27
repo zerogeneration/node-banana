@@ -1,5 +1,5 @@
 /**
- * Auth preflight for the `@zerospacestudios/engine-client` dependency (the neutral
+ * Auth preflight for the `@zerogeneration/engine-client` dependency (the neutral
  * zerogen engine contract, published to GitHub Packages). Run `npm run check:auth`
  * before `npm install`, or as a CI pre-install step, to confirm NODE_AUTH_TOKEN is
  * set — the committed `.npmrc` consumes it via `${NODE_AUTH_TOKEN}`, and without it
@@ -17,7 +17,7 @@ if (process.env.NODE_AUTH_TOKEN && process.env.NODE_AUTH_TOKEN.trim()) {
 console.error(`
 ✖ NODE_AUTH_TOKEN is not set.
 
-  node-banana installs @zerospacestudios/engine-client (the zerogen engine
+  node-banana installs @zerogeneration/engine-client (the zerogen engine
   contract) from GitHub Packages, which needs a read:packages token exposed as
   NODE_AUTH_TOKEN (consumed by the repo's .npmrc). It overrides any ~/.npmrc token
   for this registry, so it must be set here.

@@ -2,7 +2,7 @@
  * Neutral request → engine HTTP request (`{ kind, endpoint, body }`). This is the
  * serialization boundary between the moved mapping (port-shaped neutral requests)
  * and the engine's typed generate contract (the published
- * `@zerospacestudios/engine-client` `GenerateBody<K>` shapes).
+ * `@zerogeneration/engine-client` `GenerateBody<K>` shapes).
  *
  * ## Engine coverage notes (current contract)
  *
@@ -67,6 +67,7 @@ export function imageRequest(req: ImageRequest, ctx: EngineCallContext): EngineR
     model: req.model,
     prompt: req.prompt,
     ...(req.images !== undefined ? { images: req.images } : {}),
+    ...(req.mask !== undefined ? { mask: req.mask } : {}),
     ...(req.size !== undefined ? { size: req.size } : {}),
     ...(req.quality !== undefined ? { quality: req.quality } : {}),
     ...(req.background !== undefined ? { background: req.background } : {}),

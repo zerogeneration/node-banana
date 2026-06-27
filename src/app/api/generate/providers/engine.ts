@@ -3,10 +3,10 @@
  * providers (byteplus / openai / elevenlabs).
  *
  * This is the route cutover seam: instead of the in-process library-embed that
- * used to live in `@zerospacestudios/providers/node-banana`, these providers now
+ * used to live in `@zerogeneration/providers/node-banana`, these providers now
  * run through the fork's execution-adapter (`src/execution/zerogen-adapter`),
  * which maps node-banana's canvas requests onto the **zerogen engine**'s neutral
- * HTTP contract (the published `@zerospacestudios/engine-client`) and back.
+ * HTTP contract (the published `@zerogeneration/engine-client`) and back.
  *
  * **BYOK is gone for these three.** The engine holds the provider keys
  * server-side, so node-banana sends none — the route's per-provider API-key gates

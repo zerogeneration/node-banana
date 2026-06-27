@@ -77,6 +77,41 @@ describe("input mappers", () => {
     expect(req.extra).toEqual({ image_strength: 0.6, image_guidance: "high" });
   });
 
+  it("routes an inpainting mask to the dedicated `mask` field, not into images or extra", () => {
+    const req = toImageRequest({
+      model: { id: "gpt-image-2" },
+      prompt: "replace the sky",
+      images: ["https://up/base.png"],
+      parameters: { mask: "data:image/png;base64,MMM" },
+    });
+    expect(req.mask).toBe("data:image/png;base64,MMM");
+    expect(req.images).toEqual(["https://up/base.png"]);
+    expect(req.extra).toBeUndefined();
+  });
+
+  it("accepts mask aliases and never collects an `image_mask` spelling as a reference image", () => {
+    const req = toImageRequest({
+      model: { id: "gpt-image-2" },
+      prompt: "edit",
+      images: ["https://up/base.png"],
+      dynamicInputs: { image_mask: "https://up/mask.png" },
+    });
+    expect(req.mask).toBe("https://up/mask.png");
+    // The mask spelling contains "image" but is an edit overlay, not a ref image.
+    expect(req.images).toEqual(["https://up/base.png"]);
+    expect(req.extra).toBeUndefined();
+  });
+
+  it("drops a blank/unwired mask input instead of leaking it to extra", () => {
+    const req = toImageRequest({
+      model: { id: "gpt-image-2" },
+      prompt: "a cat",
+      parameters: { mask: "   " },
+    });
+    expect(req.mask).toBeUndefined();
+    expect(req.extra).toBeUndefined();
+  });
+
   it("maps video aliases (aspect_ratio, duration, generate_audio)", () => {
     const req = toVideoRequest({
       model: { id: "seedance" },
